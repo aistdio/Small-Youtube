@@ -64,7 +64,7 @@ The original language comes from the track id ending `.4`, or from the single au
 
 Default audio alone isn't enough. In a German test browser, a Polish video played its Polish original because it had no German dub. That doesn't mean the viewer understands Polish, so the language must also match.
 
-With "Show videos labelled as AI" off, a video carrying YouTube's AI label is skipped first. The label's text is localized, so match on what isn't: a `howThisWasMadeSectionViewModel` section plus a `videoPrimaryInfoRenderer` badge with `iconType` `INFO`. Videos whose creators didn't declare AI use carry no label, so they can't be caught.
+With "Add videos labelled as AI" off, a video carrying YouTube's AI label is skipped first. The label's text is localized, so match on what isn't: a `howThisWasMadeSectionViewModel` section plus a `videoPrimaryInfoRenderer` badge with `iconType` `INFO`. Videos whose creators didn't declare AI use carry no label, so they can't be caught.
 
 **Where "My languages" comes from:**
 
@@ -119,7 +119,7 @@ From top to bottom:
 - Each slider shows its value on the right in a box the user can click and type into, including values between stops.
 - **Settings**, one line each:
   - Skip auto-dubbed videos (on)
-  - Show videos labelled as AI (on)
+  - Add videos labelled as AI (on)
   - My languages: English ×, German ×, French ×, + (example; filled automatically)
   - Show videos with unknown language (off)
   - Use my account for searches (off). Hint: "Closer to your taste, but searches appear in your YouTube history."
