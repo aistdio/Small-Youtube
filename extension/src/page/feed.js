@@ -31,6 +31,7 @@
   let observed = null;
   let startedFor = null;
   let seedUses = new Map();
+  let lastPosition = null;
 
   const isOn = c => !!c?.settings?.enabled && c.settings.share !== 0;
   const surface = () => {
@@ -171,7 +172,8 @@
       replaced = shown[firstBelow];
       anchor = replaced;
     } else {
-      const position = Math.min(slots.nextPosition(placed, percent, firstBelow), shown.length);
+      const position = Math.min(slots.nextPosition(placed, percent, firstBelow, lastPosition), shown.length);
+      lastPosition = position;
       anchor = shown[Math.max(position, 1) - 1];
     }
 
@@ -226,6 +228,7 @@
     seedRetries = 0;
     renderFailures = 0;
     seedUses = new Map();
+    lastPosition = null;
     observer?.disconnect();
     observed = null;
     if (!isOn(config)) return;

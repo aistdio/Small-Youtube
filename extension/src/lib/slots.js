@@ -14,7 +14,14 @@
     return Math.ceil(((i + 1) * (100 - percent)) / percent);
   };
 
-  const nextPosition = (i, percent, firstBelowScreen) => Math.max(targetAfter(i, percent), firstBelowScreen);
+  // How many YouTube cards separate two small cards. Above 50% small cards sit side by side.
+  const spacing = percent => (percent > 0 && percent <= 50 ? Math.ceil((100 - percent) / percent) : 0);
+
+  const nextPosition = (i, percent, firstBelowScreen, previous = null) => Math.max(
+    targetAfter(i, percent),
+    firstBelowScreen,
+    previous === null ? 0 : previous + spacing(percent),
+  );
 
   const cardsToMove = (segmentCount, perRow) => (perRow > 0 ? segmentCount % perRow : 0);
 

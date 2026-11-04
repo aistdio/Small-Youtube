@@ -49,3 +49,11 @@ test('a late answer from an old page is rejected', () => {
   assert.equal(g.isCurrent(asked), false);
   assert.equal(g.isCurrent(g.current()), true);
 });
+
+test('cards arriving during a scroll keep the slider spacing', () => {
+  assert.equal(nextPosition(0, 25, 12, null), 12);
+  assert.equal(nextPosition(1, 25, 12, 12), 15);
+  assert.equal(nextPosition(2, 25, 12, 15), 18);
+  assert.equal(nextPosition(1, 50, 12, 12), 13);
+  assert.equal(nextPosition(1, 75, 12, 12), 12); // several small cards per YouTube card is normal here
+});
