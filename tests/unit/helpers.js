@@ -12,7 +12,8 @@ export function fakeClock(start = 1_000_000) {
   return {
     now: () => t,
     advance: ms => { t += ms; },
-    sleep: async ms => { t += ms; },
+    // Yields to other tasks, so code that polls in a loop can't starve the test.
+    sleep: ms => new Promise(resolve => { t += ms; setImmediate(resolve); }),
   };
 }
 
