@@ -20,6 +20,11 @@ test('every file the manifest lists exists', () => {
   for (const f of files) assert.ok(fs.existsSync(path.join(ROOT, 'extension', f)), f);
 });
 
+test('no file is listed twice, because Chrome only injects it once', () => {
+  const files = read().content_scripts.flatMap(c => c.js);
+  assert.equal(new Set(files).size, files.length);
+});
+
 test('the page script runs in the page world', () => {
   const m = read();
   assert.ok(m.content_scripts.some(c => c.world === 'MAIN'));

@@ -3,18 +3,35 @@
   "name": "Small-Youtube",
   "version": "0.1.0",
   "description": "Adds videos from small channels next to YouTube's recommendations.",
+  "default_locale": "en",
   "minimum_chrome_version": "121",
   "permissions": ["storage"],
   "host_permissions": ["https://www.youtube.com/*"],
   "content_scripts": [
     {
       "matches": ["https://www.youtube.com/*"],
-      "js": ["src/youtube.js"],
+      "js": [
+        "src/youtube.js",
+        "src/lib/settings.js",
+        "src/lib/topic.js",
+        "src/lib/language.js",
+        "src/content/store.js",
+        "src/content/queue.js",
+        "src/content/api.js",
+        "src/content/pipeline.js",
+        "src/content/content.js"
+      ],
       "run_at": "document_idle"
     },
     {
       "matches": ["https://www.youtube.com/*"],
-      "js": ["src/youtube.js"],
+      "js": [
+        "src/youtube-page.js",
+        "src/lib/slots.js",
+        "src/page/cards.js",
+        "src/page/feed.js",
+        "src/page/page.js"
+      ],
       "run_at": "document_idle",
       "world": "MAIN"
     }

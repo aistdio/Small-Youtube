@@ -1,27 +1,11 @@
-// Everything specific to YouTube's pages and data lives in this file: selectors, endpoints,
-// parsers and the card builder. When YouTube changes something, start here.
+// YouTube's data: endpoints, parsers and the card builder. Runs in the content script.
+// src/youtube-page.js holds the page side. When YouTube changes something, start with these two files.
 (() => {
   const ORIGINAL_TRACK_SUFFIX = '.4';
   const AUTODUB_TRACK_SUFFIX = '.10';
   const AUTODUB_ICON = 'PERSON_RADAR_FILLED';
   const VIDEO_FILTER = 'EgIQAQ==';
   const CHANNEL_VIDEOS_TAB = 'EgZ2aWRlb3PyBgQKAjoA';
-
-  const SELECTORS = {
-    homeGridRoot: 'ytd-rich-grid-renderer',
-    homeGrid: 'ytd-rich-grid-renderer #contents',
-    homeItem: 'ytd-rich-item-renderer',
-    homeSection: 'ytd-rich-section-renderer',
-    ad: 'ytd-ad-slot-renderer',
-    lockup: 'yt-lockup-view-model',
-    watchColumn: 'ytd-watch-next-secondary-results-renderer',
-    menuSheet: 'yt-sheet-view-model',
-    menuItem: 'yt-list-item-view-model',
-    videoLink: 'a[href*="/watch"]',
-    title: 'h3',
-    dialog: 'tp-yt-paper-dialog',
-    settingsLink: 'ytd-settings-options-renderer a[class*="AttributedStringLink"]',
-  };
 
   const api = endpoint => `/youtubei/v1/${endpoint}?prettyPrint=false`;
   const ENDPOINTS = {
@@ -33,9 +17,6 @@
     watch: videoId => `/watch?v=${encodeURIComponent(videoId)}`,
     accountPlayback: '/account_playback',
   };
-  const NAVIGATE_FINISH_EVENT = 'yt-navigate-finish';
-  const LANGUAGE_PANEL_REQUEST = /get_panel/;
-  const ITEMS_PER_ROW_VAR = '--ytd-rich-grid-items-per-row';
 
   const collect = (value, key, found = []) => {
     if (!value || typeof value !== 'object') return found;
@@ -300,8 +281,7 @@
   };
 
   (globalThis.SmallYT ??= {}).yt = {
-    ORIGINAL_TRACK_SUFFIX, AUTODUB_TRACK_SUFFIX, VIDEO_FILTER, CHANNEL_VIDEOS_TAB, SELECTORS, ENDPOINTS,
-    NAVIGATE_FINISH_EVENT, LANGUAGE_PANEL_REQUEST, ITEMS_PER_ROW_VAR,
+    ORIGINAL_TRACK_SUFFIX, AUTODUB_TRACK_SUFFIX, VIDEO_FILTER, CHANNEL_VIDEOS_TAB, ENDPOINTS,
     parseCount, formatCount, parseSearch, parseNext, parseSearchPage, parseWatchRelated,
     parseSubscribers, parseTags, parseWatchPage, continuationToken, collect,
     pickTemplate, buildLockup, setLockupTitle, addMenuEntries,
