@@ -11,6 +11,7 @@
   };
 
   const decide = (info, settings) => {
+    if (info?.aiMade && settings.showAiVideos === false) return 'skip';
     const playsDub = info?.tracks.some(t => t.isDefault && t.id.endsWith(AUTODUB_TRACK_SUFFIX));
     if (playsDub) return settings.skipDubbed ? 'skip' : 'keep';
     const language = originalLanguage(info);

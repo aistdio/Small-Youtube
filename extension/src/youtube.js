@@ -155,6 +155,16 @@
 
   const parseTags = json => json?.videoDetails?.keywords ?? [];
 
+  // The visible label is translated ("AI", "ИИ"), so this looks for what's the same in every language:
+  // a "how this was made" section, plus an info badge on the video's title.
+  const isAiMade = html => {
+    const data = embeddedJson(html, 'ytInitialData');
+    if (!data || !collect(data, 'howThisWasMadeSectionViewModel').length) return false;
+    return collect(data, 'videoPrimaryInfoRenderer')
+      .flatMap(info => info.badges ?? [])
+      .some(badge => badge.metadataBadgeRenderer?.icon?.iconType === 'INFO');
+  };
+
   const parseWatchPage = html => {
     const player = embeddedJson(html, 'ytInitialPlayerResponse');
     if (!player?.videoDetails) return null;
@@ -168,6 +178,7 @@
       title: player.videoDetails.title ?? '',
       tracks: [...tracks.values()],
       autoCaptions: captions.filter(c => c.kind === 'asr').map(c => c.languageCode),
+      aiMade: isAiMade(html),
     };
   };
 

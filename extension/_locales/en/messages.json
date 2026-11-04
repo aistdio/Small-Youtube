@@ -91,5 +91,8 @@
   },
   "noLimitTitle": {
     "message": "No limit"
+  },
+  "showAi": {
+    "message": "Show videos labelled as AI"
   }
 }

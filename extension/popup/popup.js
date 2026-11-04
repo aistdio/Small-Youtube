@@ -215,6 +215,7 @@
     const renderSubs = setupRange('subs', 'subsMin', 'subsMax');
     const renderViews = setupRange('views', 'viewsMin', 'viewsMax');
     setupSwitch('skip-dubbed', 'skipDubbed');
+    setupSwitch('show-ai', 'showAiVideos');
     setupSwitch('show-unknown', 'showUnknownLanguage');
     setupSwitch('use-account', 'useAccountForSearches');
 

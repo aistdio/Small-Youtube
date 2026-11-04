@@ -72,6 +72,25 @@ const open = async locale => {
   return b;
 };
 
+// Only the parts that show whether a video carries YouTube's "AI" label, from the normal page.
+const collect = (o, key, acc = []) => {
+  if (!o || typeof o !== 'object') return acc;
+  if (o[key]) acc.push(o[key]);
+  for (const k in o) collect(o[k], key, acc);
+  return acc;
+};
+const aiPage = html => {
+  const data = pick(html, 'ytInitialData');
+  const madeWith = collect(data, 'howThisWasMadeSectionViewModel').map(s => ({ howThisWasMadeSectionViewModel: { sectionTitle: s.sectionTitle, bodyHeader: s.bodyHeader } }));
+  const primary = collect(data, 'videoPrimaryInfoRenderer').map(r => ({ videoPrimaryInfoRenderer: { badges: trim(r.badges ?? []) } }));
+  return `${dataPage('ytInitialPlayerResponse', html, trimPlayer)}<script>var ytInitialData = ${JSON.stringify({ madeWith, primary })};</script>`;
+};
+const aiBrowser = await open('en-US');
+save('watch.ai-made.html', aiPage(await inPage.html(aiBrowser.page, '/watch?v=HWiX_2xMYAw')));
+save('watch.not-ai.html', aiPage(await inPage.html(aiBrowser.page, '/watch?v=IWbeDRbK-wk')));
+await aiBrowser.close();
+if (process.argv.includes('--only-ai')) process.exit(0);
+
 const QUERY = 'Epic Seven Steam';
 const VIDEO_FILTER = 'EgIQAQ==';
 

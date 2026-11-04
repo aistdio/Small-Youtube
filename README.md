@@ -16,6 +16,7 @@ Click the extension's icon.
 - **Small channels in your feed:** how much of your feed is small channels. The default is 25%.
 - **What counts as small:** the range of subscribers (default 10 to 10k) and video views (default no limit). Drag the handles, or type a value into the box.
 - **Skip auto-dubbed videos:** on by default. Skips videos YouTube would play with a robotic translation.
+- **Show videos labelled as AI:** on by default. Turn it off to skip videos that carry YouTube's AI label.
 - **My languages:** taken from your YouTube account once. Other videos are skipped.
 - **Show videos with unknown language:** off by default.
 - **Use my account for searches:** off by default. Picks may suit your taste better, but these searches appear in your YouTube history.

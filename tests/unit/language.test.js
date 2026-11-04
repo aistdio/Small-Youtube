@@ -42,3 +42,11 @@ test('region codes reduce to the base language', () => {
   assert.equal(originalLanguage({ tracks: [], autoCaptions: ['pt-BR'] }), 'pt');
   assert.equal(originalLanguage(null), null);
 });
+
+test('AI-made videos stay unless the setting is off', () => {
+  const ai = { ...english, aiMade: true };
+  assert.equal(decide(ai, base), 'keep');
+  assert.equal(decide(ai, { ...base, showAiVideos: true }), 'keep');
+  assert.equal(decide(ai, { ...base, showAiVideos: false }), 'skip');
+  assert.equal(decide(english, { ...base, showAiVideos: false }), 'keep');
+});

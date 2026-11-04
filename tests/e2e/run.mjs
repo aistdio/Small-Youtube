@@ -143,6 +143,11 @@ const checkPopup = async (ctx, setup) => {
   while ((await popup.locator('#languages li').count()) > 1) await popup.locator('#languages li button').first().click();
   assert.equal(await popup.locator('#languages li button').first().isDisabled(), true, 'the last language stays');
 
+  assert.equal(await popup.locator('#show-ai').isChecked(), true, 'AI videos are shown by default');
+  await popup.locator('#show-ai').click();
+  assert.equal((await stored()).showAiVideos, false);
+  await popup.locator('#show-ai').click();
+
   await popup.locator('#power').click();
   assert.equal((await stored()).enabled, false);
   assert.equal(await popup.locator('#power').getAttribute('aria-pressed'), 'false');

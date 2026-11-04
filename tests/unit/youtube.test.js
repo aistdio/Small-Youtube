@@ -63,6 +63,12 @@ test('parseWatchPage reads tracks and captions', () => {
   assert.equal(AUTODUB_TRACK_SUFFIX, '.10');
 });
 
+test("parseWatchPage spots YouTube's AI label", () => {
+  assert.equal(parseWatchPage(read('watch.ai-made.html')).aiMade, true);
+  assert.equal(parseWatchPage(read('watch.not-ai.html')).aiMade, false);
+  assert.equal(parseWatchPage(read('watch.finnish.html')).aiMade, false); // no page data at all
+});
+
 test('unexpected shapes give empty results, not errors', () => {
   assert.deepEqual(parseSearch({ unexpected: true }, 'en'), []);
   assert.deepEqual(parseNext({ unexpected: true }, 'en'), []);

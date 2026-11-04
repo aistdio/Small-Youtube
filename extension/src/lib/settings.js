@@ -10,6 +10,7 @@
     viewsMin: 0,
     viewsMax: null,
     skipDubbed: true,
+    showAiVideos: true,
     showUnknownLanguage: false,
     useAccountForSearches: false,
     languages: null, // filled on first run, null until then
@@ -37,6 +38,7 @@
       viewsMin: count(r.viewsMin, DEFAULTS.viewsMin),
       viewsMax: count(r.viewsMax, DEFAULTS.viewsMax, true),
       skipDubbed: flag(r.skipDubbed, DEFAULTS.skipDubbed),
+      showAiVideos: flag(r.showAiVideos, DEFAULTS.showAiVideos),
       showUnknownLanguage: flag(r.showUnknownLanguage, DEFAULTS.showUnknownLanguage),
       useAccountForSearches: flag(r.useAccountForSearches, DEFAULTS.useAccountForSearches),
       languages: DEFAULTS.languages,

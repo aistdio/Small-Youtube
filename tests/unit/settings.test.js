@@ -15,6 +15,7 @@ test('defaults match the design', () => {
   assert.equal(d.showUnknownLanguage, false);
   assert.equal(d.useAccountForSearches, false);
   assert.equal(d.enabled, true);
+  assert.equal(d.showAiVideos, true);
 });
 
 test('odd settings become valid', () => {
@@ -31,6 +32,8 @@ test('odd settings become valid', () => {
   assert.equal(normalize({ subsMin: 200, subsMax: null }).subsMin, 200);
   assert.equal(normalize(null).share, 25);
   assert.equal(normalize({ skipDubbed: 'yes' }).skipDubbed, true);
+  assert.equal(normalize({ showAiVideos: 'no' }).showAiVideos, true);
+  assert.equal(normalize({ showAiVideos: false }).showAiVideos, false);
 });
 
 test('language defaults', () => {
