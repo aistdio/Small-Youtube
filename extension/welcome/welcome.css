@@ -76,12 +76,7 @@ li::marker { font-weight: 600; }
 .glyph { fill: var(--ink); }
 .label { fill: var(--ink); font-size: 15px; }
 
-.done h1::before {
-  content: "";
+.done img {
   display: block;
-  width: 48px;
-  height: 27px;
   margin-bottom: 16px;
-  border-radius: 4px;
-  background: var(--accent);
 }
