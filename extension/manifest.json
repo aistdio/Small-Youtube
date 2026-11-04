@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Small-Youtube",
+  "version": "0.1.0",
+  "description": "Adds videos from small channels next to YouTube's recommendations.",
+  "minimum_chrome_version": "121",
+  "permissions": ["storage"],
+  "host_permissions": ["https://www.youtube.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["src/youtube.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["src/youtube.js"],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": { "id": "small-youtube@extension.invalid", "strict_min_version": "128.0" }
+  }
+}
