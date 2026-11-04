@@ -28,9 +28,18 @@
 
   let contextKnown = false;
 
-  const sendConfig = async () => {
+  const sendConfig = async (extra = {}) => {
     const settings = await store.getSettings();
-    send('config', { settings, paused: queue.isHalted(), labels: labels() });
+    send('config', { settings, paused: queue.isHalted(), labels: labels(), ...extra });
+  };
+
+  // Reads the account's languages once. A failed attempt doesn't count, and retries at most daily.
+  const askForLanguagesIfNeeded = async () => {
+    if (!context.loggedIn) return false;
+    const state = await store.getState('languageRead');
+    if (!settingsLib.shouldReadLanguages(state, Date.now())) return false;
+    await store.setState('languageRead', { done: false, lastTry: Date.now() });
+    return true;
   };
 
   const ensureLanguages = async () => {
@@ -43,16 +52,29 @@
   const handlers = {
     context: async data => {
       Object.assign(context, { clientVersion: data.clientVersion, hl: data.hl, gl: data.gl, loggedIn: data.loggedIn });
+      let readLanguages = false;
       if (!contextKnown) {
         contextKnown = true;
         await ensureLanguages();
+        readLanguages = await askForLanguagesIfNeeded();
       }
-      await sendConfig();
+      await sendConfig({ readLanguages });
+    },
+    languages: async ({ codes, hl }) => {
+      const settings = await store.getSettings();
+      await store.setSettings(settingsLib.applyAccountLanguages(settings, codes, hl));
+      await store.setState('languageRead', { done: true, lastTry: Date.now() });
     },
     needCard: async ({ slotId, generation, seed }) => {
       const settings = await store.getSettings();
       const card = settings.enabled && !queue.isHalted() ? await pipeline.findCard(seed, settings, labels()) : null;
       send(card ? 'card' : 'noCard', { slotId, generation, card });
+    },
+    hideChannel: async ({ channelId, channelName }) => {
+      await store.hideChannel(channelId, channelName);
+    },
+    lessTopic: async ({ seed }) => {
+      await pipelineLib.handleLessTopic({ seed, tags: await pipeline.tagsFor(seed) }, store);
     },
   };
 

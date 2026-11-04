@@ -30,6 +30,7 @@
         "src/lib/slots.js",
         "src/page/cards.js",
         "src/page/feed.js",
+        "src/page/languages.js",
         "src/page/page.js"
       ],
       "run_at": "document_idle",

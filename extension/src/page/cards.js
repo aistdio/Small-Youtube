@@ -64,7 +64,36 @@
   const remember = (el, card) => known.set(el, card);
   const recall = el => known.get(el);
 
+  // The menu is YouTube's own, built from data we extended. Our entries borrow an existing entry's
+  // action, so their clicks must be caught before YouTube handles them.
+  const closeMenu = () => {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true }));
+    document.body.click();
+  };
+
+  const installMenu = ({ cardMark, getLabels, onLessTopic, onHideChannel }) => {
+    let lastCard = null;
+    document.addEventListener('pointerdown', e => {
+      const card = e.target.closest?.(`[${cardMark}]`);
+      if (card) lastCard = card;
+    }, true);
+    document.addEventListener('click', e => {
+      const item = e.target.closest?.(S.menuItem);
+      if (!item) return;
+      const [less, hide] = getLabels();
+      const text = (item.innerText ?? '').trim();
+      if (text !== less && text !== hide) return;
+      e.stopPropagation();
+      e.preventDefault();
+      closeMenu();
+      const card = lastCard && recall(lastCard);
+      if (!card) return;
+      if (text === less) onLessTopic(lastCard, card);
+      else onHideChannel(card);
+    }, true);
+  };
+
   (globalThis.SmallYT ??= {}).cards = {
-    verifyRendered, createWatchCard, createHomeCard, measure, settle, prepareFade, fadeIn, remember, recall,
+    verifyRendered, createWatchCard, createHomeCard, measure, settle, prepareFade, fadeIn, remember, recall, installMenu,
   };
 })();

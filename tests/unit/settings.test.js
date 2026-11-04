@@ -38,3 +38,20 @@ test('language defaults', () => {
   assert.deepEqual(removeLanguage(['en', 'ru'], 'en'), ['ru']);
   assert.deepEqual(removeLanguage(['ru'], 'ru'), ['ru']);
 });
+
+const { shouldReadLanguages, applyAccountLanguages } = globalThis.SmallYT?.settings ?? {};
+const DAY = 86400000;
+
+test('reads once, retries at most daily', () => {
+  assert.ok(shouldReadLanguages({ done: false, lastTry: 0 }, DAY));
+  assert.ok(!shouldReadLanguages({ done: true, lastTry: 0 }, DAY * 9));
+  assert.ok(!shouldReadLanguages({ done: false, lastTry: DAY }, DAY + 1000));
+  assert.ok(shouldReadLanguages({ done: false, lastTry: DAY }, DAY * 2 + 1));
+  assert.ok(shouldReadLanguages(undefined, DAY));
+});
+
+test("account languages replace defaults, but not the user's edits", () => {
+  const s = { ...DEFAULTS, languages: ['en', 'ru'], languagesEdited: false };
+  assert.deepEqual(applyAccountLanguages(s, ['en', 'en-US', 'ja'], 'ru').languages, ['en', 'ja', 'ru']);
+  assert.deepEqual(applyAccountLanguages({ ...s, languagesEdited: true }, ['ja'], 'ru').languages, ['en', 'ru']);
+});

@@ -1,10 +1,21 @@
 // The page-world side of the bridge. Only this world can read YouTube's config and render cards.
 (() => {
-  const { feed } = globalThis.SmallYT;
+  const { feed, cards, languages } = globalThis.SmallYT;
   const NS = 'small-yt';
   const CONFIG_POLL_MS = 300;
+  let labels = [];
+  let readingLanguages = false;
 
   const send = (type, data = {}) => window.postMessage({ ns: NS, from: 'page', type, ...data }, location.origin);
+
+  const readLanguages = async () => {
+    if (readingLanguages) return;
+    readingLanguages = true;
+    const codes = await languages.readAccountLanguages();
+    readingLanguages = false;
+    if (codes) send('languages', { codes, hl: window.ytcfg?.get?.('HL') });
+    else send('languagesFailed');
+  };
 
   const sendContext = () => {
     const cfg = window.ytcfg;
@@ -23,8 +34,25 @@
   window.addEventListener('message', e => {
     if (e.source !== window || e.data?.ns !== NS || e.data.from !== 'content') return;
     if (e.data.type === 'hello') sendContext();
-    if (e.data.type === 'config') feed.applyConfig(e.data);
+    if (e.data.type === 'config') {
+      labels = e.data.labels ?? labels;
+      feed.applyConfig(e.data);
+      if (e.data.readLanguages) readLanguages();
+    }
     if (e.data.type === 'card' || e.data.type === 'noCard') feed.onCard(e.data);
+  });
+
+  cards.installMenu({
+    cardMark: 'data-small-yt',
+    getLabels: () => labels,
+    onLessTopic: (el, card) => {
+      send('lessTopic', { seed: card.seed });
+      feed.removeCards([el]);
+    },
+    onHideChannel: card => {
+      send('hideChannel', { channelId: card.channelId, channelName: card.channelName });
+      feed.removeCards(feed.smallCards().filter(el => cards.recall(el)?.channelId === card.channelId));
+    },
   });
 
   feed.start(send);

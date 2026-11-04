@@ -14,6 +14,9 @@
     throw err;
   };
 
+  const seedAllowed = (seed, blocks) => !blocks.seedChannels.includes(seed.channelName)
+    && !blocks.phrases.some(phrase => topic.matchesPhrase(seed.title, phrase));
+
   const createPipeline = ({ api, store, rng, context }) => {
     const pools = new Map();
     const tried = new Set(); // videos already checked or chosen, so parallel cards can't pick the same one
@@ -79,10 +82,16 @@
       };
     };
 
+    const tagsFor = async seed => {
+      if (pools.has(seed.id)) return (await pools.get(seed.id)).tags;
+      return api.tags(seed.id).catch(() => []);
+    };
+
     const findCard = async (seed, settings, labels) => {
       try {
-        const pool = await poolFor(seed, settings);
         const blocks = await store.getBlocks();
+        if (!seedAllowed(seed, blocks)) return null;
+        const pool = await poolFor(seed, settings);
         const filterContext = {
           seed,
           settings,
@@ -121,8 +130,15 @@
       }
     };
 
-    return { findCard };
+    return { findCard, tagsFor };
   };
 
-  (globalThis.SmallYT ??= {}).pipeline = { createPipeline };
+  // "Less of this topic": mute one clear phrase, or stop using the seed's channel if there isn't one.
+  const handleLessTopic = async ({ seed, tags }, store) => {
+    const phrase = topic.bestPhrase(seed.title, tags);
+    if (phrase) await store.muteTopic(phrase);
+    else if (seed.channelName) await store.muteSeedChannel(seed.channelName);
+  };
+
+  (globalThis.SmallYT ??= {}).pipeline = { createPipeline, handleLessTopic, seedAllowed };
 })();

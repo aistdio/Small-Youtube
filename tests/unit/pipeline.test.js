@@ -199,3 +199,41 @@ test('hidden channels and muted topics are respected', async () => {
   const card = await muted.p.findCard({ ...seed, title: 'Something else', id: 'x' }, settings, labels);
   assert.equal(card.videoId, 'related0000'); // the only title without the muted phrase
 });
+
+const { handleLessTopic, seedAllowed } = globalThis.SmallYT?.pipeline ?? {};
+
+test('less of this topic mutes the best phrase', async () => {
+  const store = createStore(fakeChrome(), Date.now);
+  await handleLessTopic({ seed: { title: 'Epic Seven launch', channelName: 'N' }, tags: ['Epic Seven'] }, store);
+  assert.deepEqual((await store.getBlocks()).phrases, ['Epic Seven']);
+  assert.deepEqual((await store.getBlocks()).seedChannels, []);
+});
+
+test('with no clear phrase it stops using the seed channel', async () => {
+  const store = createStore(fakeChrome(), Date.now);
+  await handleLessTopic({ seed: { title: 'i humbly submit a toast', channelName: 'yuyu' }, tags: [] }, store);
+  assert.deepEqual((await store.getBlocks()).seedChannels, ['yuyu']);
+  assert.deepEqual((await store.getBlocks()).phrases, []);
+});
+
+test('muted topics and seed channels stop seeds', () => {
+  assert.equal(seedAllowed({ title: 'Epic Seven news', channelName: 'A' }, { phrases: ['Epic Seven'], seedChannels: [] }), false);
+  assert.equal(seedAllowed({ title: 'Other', channelName: 'yuyu' }, { phrases: [], seedChannels: ['yuyu'] }), false);
+  assert.equal(seedAllowed({ title: 'Other', channelName: 'A' }, { phrases: ['Epic Seven'], seedChannels: ['yuyu'] }), true);
+});
+
+test('a blocked seed costs no requests', async () => {
+  const { p, calls, store } = setup();
+  await store.muteSeedChannel(seed.channelName);
+  assert.equal(await p.findCard(seed, settings, labels), null);
+  assert.equal(calls.related + calls.search + calls.tags, 0);
+});
+
+test('tags for a seed come from memory when known', async () => {
+  const { p, calls } = setup();
+  await p.findCard(seed, settings, labels);
+  assert.deepEqual(await p.tagsFor(seed), ['Epic Seven']);
+  assert.equal(calls.tags, 1);
+  assert.deepEqual(await p.tagsFor({ id: 'other' }), ['Epic Seven']);
+  assert.equal(calls.tags, 2);
+});

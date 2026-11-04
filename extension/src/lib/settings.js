@@ -54,7 +54,14 @@
   const mergeAccountLanguages = (codes, hl) => unique([...codes, hl].filter(Boolean).map(baseLanguage));
   const removeLanguage = (list, code) => (list.length > 1 ? list.filter(c => c !== code) : list);
 
+  const DAY_MS = 24 * 3600 * 1000;
+  const shouldReadLanguages = (state, now) => !state?.done && now - (state?.lastTry ?? 0) >= DAY_MS;
+  const applyAccountLanguages = (settings, codes, hl) => (
+    settings.languagesEdited ? settings : { ...settings, languages: mergeAccountLanguages(codes, hl) }
+  );
+
   (globalThis.SmallYT ??= {}).settings = {
     SHARES, DEFAULTS, baseLanguage, normalize, initialLanguages, mergeAccountLanguages, removeLanguage,
+    shouldReadLanguages, applyAccountLanguages,
   };
 })();
