@@ -263,20 +263,23 @@
     return null;
   };
 
+  const MENU_ICONS = ['NOT_INTERESTED', 'REMOVE_CIRCLE'];
+
   const addMenuEntries = (lockup, labels) => {
     const out = clone(lockup);
     const list = findList(metaOf(out)?.menuButton);
     if (!list?.length) return out;
-    const setTitle = (value, label) => {
-      if (!value || typeof value !== 'object') return;
-      if (typeof value.title?.content === 'string') value.title.content = label;
-      for (const k in value) setTitle(value[k], label);
-    };
-    for (const label of labels) {
-      const entry = clone(list[list.length - 1]);
-      setTitle(entry, label);
+    const template = list[list.length - 1];
+    labels.forEach((label, index) => {
+      const entry = clone(template);
+      const item = entry.listItemViewModel;
+      if (item?.title) item.title.content = label;
+      const icon = item?.leadingImage?.sources?.[0]?.clientResource;
+      if (icon) icon.imageName = MENU_ICONS[index] ?? icon.imageName;
+      // Without the borrowed action, a missed click does nothing rather than opening Share.
+      if (item?.rendererContext) delete item.rendererContext.commandContext;
       list.push(entry);
-    }
+    });
     return out;
   };
 

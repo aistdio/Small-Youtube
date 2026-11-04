@@ -49,3 +49,23 @@ test('a lockup without a menu or a usable shape does not throw', () => {
   const lk = { metadata: { lockupMetadataViewModel: { title: { content: 't' } } } };
   assert.deepEqual(addMenuEntries(lk, ['x']).metadata.lockupMetadataViewModel.title.content, 't');
 });
+
+test('added menu entries have their own icons and no borrowed action', () => {
+  const lk = addMenuEntries(template('next.en.json'), ['Less of this topic', 'Hide this channel']);
+  const find = value => {
+    if (!value || typeof value !== 'object') return null;
+    if (Array.isArray(value.listItems)) return value.listItems;
+    for (const k in value) {
+      const found = find(value[k]);
+      if (found) return found;
+    }
+    return null;
+  };
+  const items = find(lk.metadata.lockupMetadataViewModel.menuButton);
+  const [less, hide] = items.slice(-2).map(i => i.listItemViewModel);
+  assert.equal(less.leadingImage.sources[0].clientResource.imageName, 'NOT_INTERESTED');
+  assert.equal(hide.leadingImage.sources[0].clientResource.imageName, 'REMOVE_CIRCLE');
+  assert.equal(less.rendererContext?.commandContext, undefined);
+  assert.equal(hide.rendererContext?.commandContext, undefined);
+  assert.ok(!JSON.stringify(items.slice(-2)).includes('get_share_panel'));
+});
