@@ -60,6 +60,9 @@
       }
       await sendConfig({ readLanguages });
     },
+    devReload: async () => {
+      if (!chrome.runtime.getManifest().update_url) await chrome.runtime.sendMessage({ type: 'devReload' });
+    },
     languages: async ({ codes, hl }) => {
       const settings = await store.getSettings();
       await store.setSettings(settingsLib.applyAccountLanguages(settings, codes, hl));

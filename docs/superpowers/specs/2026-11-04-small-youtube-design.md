@@ -58,7 +58,7 @@ Fetch the video's normal page with the user's account, so YouTube's own decision
 | Original language is not in "My languages" | Skip |
 | No clear language | Skip, unless "Show videos with unknown language" is on |
 
-Related-list cards sometimes already carry YouTube's "Auto-dubbed" label (seen in a no-cookie English test). Skip those early, before spending a page fetch. The label's text is localized.
+Related-list cards sometimes already carry YouTube's "Auto-dubbed" label. Skip those early, before spending a page fetch. The label's text is localized, but its `iconName` (`PERSON_RADAR_FILLED`) isn't, so match on that.
 
 The original language comes from the track id ending `.4`, or from the single auto-caption language when there are no tracks.
 
@@ -99,6 +99,8 @@ Share means the part of the feed made of small cards. All YouTube cards stay unl
 | 75% | 3 per 1 |
 | 100% | Small cards replace YouTube's as they render (see below) |
 | Random | A new share on each feed load |
+
+The value box also accepts any whole percent between the stops.
 
 At 100%, hide a YouTube card only after its replacement has rendered, and only below the screen so nothing swaps in view. If no replacement is found, YouTube's card stays. On a pause, the daily limit or OFF, bring every hidden card back. The feed is never left blank.
 
@@ -223,7 +225,7 @@ One Manifest V3 codebase in plain JavaScript with no framework. Chrome, Edge, Br
 ## Repository and docs
 
 - Two scripts on the page: a content script for requests and storage, and a page-world script (`"world": "MAIN"`) for rendering cards. They talk by window messages.
-- All YouTube-specific selectors, endpoints and parsers live in one module, so a YouTube change has one place to fix.
+- All YouTube-specific code lives in two files, `src/youtube.js` (endpoints, parsers, card builder) and `src/youtube-page.js` (selectors, events, reading cards), so a YouTube change has one small place to fix. It can't be one file: Chrome injects a file listed in two `content_scripts` entries only once, in the first entry's world.
 - `AGENTS.md`: how to work on the project and how to test it.
 - `CLAUDE.md`: one line, `@AGENTS.md`.
 - `README.md`: what it is, how to install, browser status.

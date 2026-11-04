@@ -1,6 +1,8 @@
 // Runs the real extension in logged-out test browsers. `E2E_ONLY=chromium-en npm run e2e` runs one setup.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { EDGE_PATH, launch } from './harness.mjs';
 
 const CARD_TIMEOUT = Number(process.env.E2E_TIMEOUT ?? 90000);
@@ -89,14 +91,124 @@ const checkEmptyHome = async page => {
   if (items === 0) assert.equal(small, 0, 'nothing added to an empty home feed');
 };
 
+const extensionId = async ctx => {
+  const worker = ctx.serviceWorkers()[0] ?? (await ctx.waitForEvent('serviceworker', { timeout: 15000 }));
+  return new URL(worker.url()).host;
+};
+
+const checkPopup = async (ctx, setup) => {
+  const id = await extensionId(ctx);
+  const popup = await ctx.newPage();
+  await popup.setViewportSize({ width: 320, height: 800 });
+  await popup.goto(`chrome-extension://${id}/popup/popup.html`);
+  await popup.waitForFunction(() => document.getElementById('share-value').value !== '');
+  const value = sel => popup.locator(sel).inputValue();
+  const stored = () => popup.evaluate(async () => (await chrome.storage.local.get('settings')).settings ?? {});
+
+  assert.equal(await value('#share-value'), '25%');
+  assert.equal(await value('#subs-min'), '10');
+  assert.equal(await value('#subs-max'), '10k');
+  assert.equal(await value('#views-min'), '0');
+  assert.equal(await popup.locator('.tile.small').count(), 3, 'the preview shows 25%');
+  assert.equal(await popup.locator('.tile').count(), 12);
+
+  await popup.locator('#subs-max').fill('5000');
+  await popup.locator('#subs-max').blur();
+  assert.equal((await stored()).subsMax, 5000);
+  const pos = Number(await value('#subs-max-slider'));
+  assert.ok(pos > 0.6 && pos < 0.8, 'the handle sits between stops');
+  assert.equal(await value('#subs-max'), '5k');
+
+  await popup.locator('#subs-max').fill('abc');
+  await popup.locator('#subs-max').blur();
+  assert.equal(await value('#subs-max'), '5k', 'garbage restores the previous value');
+  assert.equal((await stored()).subsMax, 5000);
+
+  await popup.locator('#subs-min').fill('9000');
+  await popup.locator('#subs-min').blur();
+  assert.equal((await stored()).subsMin ?? 10, 10, 'minimum can not pass maximum');
+
+  await popup.locator('#share-value').fill('40');
+  await popup.locator('#share-value').blur();
+  assert.equal((await stored()).share, 40);
+  assert.equal(await value('#share-value'), '40%');
+
+  await popup.locator('#share-slider').focus();
+  await popup.keyboard.press('ArrowRight');
+  assert.equal((await stored()).share, 50, 'arrow keys move to the next stop');
+
+  await popup.locator('#add-language').selectOption('fi');
+  assert.ok((await stored()).languages.includes('fi'));
+  assert.equal((await stored()).languagesEdited, true);
+  while ((await popup.locator('#languages li').count()) > 1) await popup.locator('#languages li button').first().click();
+  assert.equal(await popup.locator('#languages li button').first().isDisabled(), true, 'the last language stays');
+
+  await popup.locator('#power').click();
+  assert.equal((await stored()).enabled, false);
+  assert.equal(await popup.locator('#power').getAttribute('aria-pressed'), 'false');
+  await popup.locator('#power').click();
+  assert.equal((await stored()).enabled, true);
+
+  assert.equal(await popup.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true, 'no sideways scroll');
+  assert.equal(await popup.locator('main > :last-child').getAttribute('id'), 'power', 'the on/off button is at the very bottom');
+  if (process.env.E2E_SHOTS) {
+    await popup.locator('#hidden-list').evaluate(d => { d.open = true; });
+    await popup.setViewportSize({ width: 360, height: 760 });
+    await popup.screenshot({ path: path.join(process.env.E2E_SHOTS, `${setup.name}-popup-light.png`) });
+    await popup.emulateMedia({ colorScheme: 'dark' });
+    await popup.screenshot({ path: path.join(process.env.E2E_SHOTS, `${setup.name}-popup-dark.png`) });
+  }
+  await popup.evaluate(() => chrome.storage.local.remove('settings'));
+  await popup.close();
+};
+
+const checkWelcome = async (ctx, setup) => {
+  const id = await extensionId(ctx);
+  const isWelcome = page => page.url().startsWith(`chrome-extension://${id}/welcome/`);
+  const deadline = Date.now() + 5000;
+  while (!ctx.pages().some(isWelcome) && Date.now() < deadline) await new Promise(r => setTimeout(r, 200));
+  const welcome = ctx.pages().filter(isWelcome);
+  assert.equal(welcome.length, 1, 'exactly one welcome tab on install');
+  assert.ok((await welcome[0].locator('h1').first().textContent()).length > 0);
+  if (process.env.E2E_SHOTS) await welcome[0].screenshot({ path: path.join(process.env.E2E_SHOTS, `${setup.name}-welcome.png`) });
+  await welcome[0].close();
+};
+
+const checkNoWelcomeOnRestart = async setup => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'small-yt-restart-'));
+  try {
+    for (const run of [1, 2]) {
+      const browser = await launch({ ...setup, userDataDir: dir });
+      await new Promise(r => setTimeout(r, 2500));
+      const count = browser.ctx.pages().filter(p => p.url().includes('/welcome/')).length;
+      assert.equal(count, run === 1 ? 1 : 0, `welcome tabs on browser start ${run}`);
+      // Closed first, so Chrome's session restore can't bring it back and hide a second install.
+      for (const page of browser.ctx.pages().filter(p => p.url().includes('/welcome/'))) await page.close();
+      await browser.close();
+    }
+  } finally {
+    // Windows can hold a closed browser's profile for a while. It's only a temp folder, so that isn't a failure.
+    try {
+      fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 500 });
+    } catch {
+      console.log(`left temp profile behind: ${dir}`);
+    }
+  }
+};
+
 let failed = 0;
 for (const setup of chosen) {
   const browser = await launch(setup);
   const errors = watchExtensionErrors(browser.page);
   try {
-    const watch = await checkWatchColumn(browser.page, setup);
-    await checkLateCardsDropped(browser.page);
-    await checkEmptyHome(browser.page);
+    await checkWelcome(browser.ctx, setup);
+    await checkPopup(browser.ctx, setup);
+    await checkNoWelcomeOnRestart(setup);
+    const watch = process.env.E2E_UI_ONLY ? 'skipped' : await checkWatchColumn(browser.page, setup);
+    if (!process.env.E2E_UI_ONLY) {
+      await checkLateCardsDropped(browser.page);
+      await checkEmptyHome(browser.page);
+    }
     assert.deepEqual(errors, [], 'no extension errors');
     console.log(`PASS ${setup.name}: watch column ${watch}`);
   } catch (err) {

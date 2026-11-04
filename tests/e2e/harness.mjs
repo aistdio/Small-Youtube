@@ -23,7 +23,7 @@ export async function launch({
   const page = ctx.pages()[0] ?? (await ctx.newPage());
   const close = async () => {
     await ctx.close().catch(() => {});
-    if (!userDataDir) fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3 });
+    if (!userDataDir) fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 500 });
   };
   return { ctx, page, close };
 }

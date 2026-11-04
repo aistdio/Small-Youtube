@@ -1,0 +1,87 @@
+:root {
+  color-scheme: light dark;
+  --paper: #f7f8fa;
+  --ink: #15181e;
+  --muted: #5e6775;
+  --line: #d6dbe3;
+  --surface: #ffffff;
+  --tile: #8a93a1;
+  --accent: #e0a100;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #16181d;
+    --ink: #eceef2;
+    --muted: #9aa3b2;
+    --line: #343a46;
+    --surface: #20232a;
+    --tile: #6b7280;
+    --accent: #f2b233;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.5 system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.pointer {
+  position: fixed;
+  top: 8px;
+  right: 72px;
+  color: var(--accent);
+}
+
+main {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 88px 16px 48px;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+p { margin: 0 0 24px; color: var(--muted); }
+
+ol {
+  display: grid;
+  gap: 24px;
+  margin: 0;
+  padding-left: 24px;
+}
+
+li::marker { font-weight: 600; }
+
+.toolbar {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  margin-bottom: 8px;
+}
+
+.bar { fill: var(--surface); stroke: var(--line); }
+.field { fill: var(--line); }
+.avatar, .tile { fill: var(--tile); }
+.lit { fill: var(--accent); }
+.ring { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+.glyph { fill: var(--ink); }
+.label { fill: var(--ink); font-size: 15px; }
+
+.done h1::before {
+  content: "";
+  display: block;
+  width: 48px;
+  height: 27px;
+  margin-bottom: 16px;
+  border-radius: 4px;
+  background: var(--accent);
+}

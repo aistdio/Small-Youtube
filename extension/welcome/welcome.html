@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Small-Youtube</title>
+  <link rel="stylesheet" href="welcome.css">
+</head>
+<body>
+  <svg class="pointer" width="64" height="64" viewBox="0 0 64 64" aria-hidden="true">
+    <path d="M10 58 C 30 52, 48 36, 54 12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+    <path d="M42 18 L55 8 L60 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+
+  <main>
+    <div class="guide" id="guide">
+      <h1 data-i18n="welcomeHeading"></h1>
+      <p data-i18n="welcomeIntro"></p>
+
+      <ol>
+        <li>
+          <svg class="toolbar" viewBox="0 0 320 64" role="img" aria-hidden="true">
+            <rect x="0.5" y="0.5" width="319" height="63" rx="8" class="bar"/>
+            <rect x="16" y="20" width="190" height="24" rx="12" class="field"/>
+            <circle cx="244" cy="32" r="19" class="ring"/>
+            <path d="M236 25h6v-3a3 3 0 0 1 6 0v3h6v6h-3a3 3 0 0 0 0 6h3v7h-18v-7h3a3 3 0 0 0 0-6h-3z" class="glyph" transform="translate(-1 -1)"/>
+            <circle cx="292" cy="32" r="12" class="avatar"/>
+          </svg>
+          <span data-i18n="stepPuzzle"></span>
+        </li>
+        <li>
+          <svg class="toolbar" viewBox="0 0 320 64" role="img" aria-hidden="true">
+            <rect x="0.5" y="0.5" width="319" height="63" rx="8" class="bar"/>
+            <rect x="16" y="22" width="9" height="7" rx="1.5" class="tile"/>
+            <rect x="27" y="22" width="9" height="7" rx="1.5" class="tile"/>
+            <rect x="16" y="31" width="9" height="7" rx="1.5" class="tile"/>
+            <rect x="27" y="31" width="9" height="7" rx="1.5" class="lit"/>
+            <text x="48" y="37" class="label">Small-Youtube</text>
+            <circle cx="284" cy="32" r="19" class="ring"/>
+            <path d="M279 22h10l-1.5 8 3.5 4v2h-6v8l-1 2-1-2v-8h-6v-2l3.500-4z" class="glyph"/>
+          </svg>
+          <span data-i18n="stepPin"></span>
+        </li>
+      </ol>
+    </div>
+
+    <div class="done" id="done" hidden>
+      <h1 data-i18n="pinnedHeading"></h1>
+      <p data-i18n="pinnedText"></p>
+    </div>
+  </main>
+
+  <script src="welcome.js"></script>
+</body>
+</html>
