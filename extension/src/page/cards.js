@@ -59,5 +59,12 @@
   };
   const fadeIn = el => { el.style.opacity = '1'; };
 
-  (globalThis.SmallYT ??= {}).cards = { verifyRendered, createWatchCard, createHomeCard, measure, settle, prepareFade, fadeIn };
+  // What each small card is, for the ⋮ menu actions.
+  const known = new WeakMap();
+  const remember = (el, card) => known.set(el, card);
+  const recall = el => known.get(el);
+
+  (globalThis.SmallYT ??= {}).cards = {
+    verifyRendered, createWatchCard, createHomeCard, measure, settle, prepareFade, fadeIn, remember, recall,
+  };
 })();

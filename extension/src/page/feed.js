@@ -4,12 +4,16 @@
   const S = ytPage.SELECTORS;
 
   const MARK = 'data-small-yt';
+  const HIDDEN = 'small-yt-hidden';
   const NEAR_SCREENS = 1.5;
   const MAX_PENDING = 2;
   const FILL_DELAY_MS = 400;
+  const RESIZE_DELAY_MS = 300;
   const CONTAINER_POLL_MS = 500;
   const CONTAINER_POLL_LIMIT = 40;
   const SEED_RETRY_LIMIT = 10;
+  const SEED_SEARCH_RADIUS = 6;
+  const RENDER_FAILURES_TO_STOP = 3;
 
   let send = () => {};
   let config = null;
@@ -20,11 +24,13 @@
   let pending = 0;
   let slotCounter = 0;
   let seedRetries = 0;
+  let renderFailures = 0;
   let fillTimer = null;
+  let resizeTimer = null;
   let observer = null;
   let observed = null;
   let startedFor = null;
-  const info = new WeakMap();
+  let seedUses = new Map();
 
   const isOn = c => !!c?.settings?.enabled && c.settings.share !== 0;
   const surface = () => {
@@ -35,12 +41,19 @@
   const containerFor = surf => document.querySelector(surf === 'watch' ? S.watchColumn : S.homeGrid);
 
   const isSmall = el => el.hasAttribute(MARK);
+  const isHidden = el => el.classList.contains(HIDDEN);
   const smallCards = () => [...document.querySelectorAll(`[${MARK}]`)];
+  const belowScreen = el => el.getBoundingClientRect().top >= innerHeight;
+  const nearLimit = () => innerHeight * (1 + NEAR_SCREENS);
 
   const youTubeCards = surf => {
     const root = containerFor(surf);
-    if (!root || surf !== 'watch') return [];
-    return [...root.querySelectorAll(S.lockup)].filter(el => !isSmall(el) && el.querySelector(S.videoLink));
+    if (!root) return [];
+    if (surf === 'watch') {
+      return [...root.querySelectorAll(S.lockup)].filter(el => !isSmall(el) && el.querySelector(S.videoLink));
+    }
+    return [...root.querySelectorAll(`:scope > ${S.homeItem}`)]
+      .filter(el => !isSmall(el) && !el.querySelector(S.ad) && el.querySelector(S.lockup));
   };
 
   const currentVideoId = () => new URLSearchParams(location.search).get('v');
@@ -56,7 +69,20 @@
     return title ? { id, title, channelName: document.querySelector(S.watchChannel)?.textContent?.trim() ?? '' } : null;
   };
 
-  const pickSeed = surf => (surf === 'watch' ? watchSeed() : null);
+  // A seed near the card's position, so a card tends to sit close to the video that led to it.
+  // Above 50% there are more small cards than YouTube cards, so a seed can supply several.
+  const homeSeed = (list, position) => {
+    const maxUses = percent > 50 ? 3 : 1;
+    const seeds = list
+      .map((el, index) => ({ index, seed: ytPage.seedFromLockup(el.data?.content?.lockupViewModel) }))
+      .filter(({ seed }) => seed && (seedUses.get(seed.id) ?? 0) < maxUses);
+    if (!seeds.length) return null;
+    const near = seeds.filter(({ index }) => Math.abs(index - position) <= SEED_SEARCH_RADIUS);
+    const from = near.length ? near : seeds;
+    const { seed } = from[Math.floor(Math.random() * from.length)];
+    seedUses.set(seed.id, (seedUses.get(seed.id) ?? 0) + 1);
+    return seed;
+  };
 
   const schedule = (delay = FILL_DELAY_MS) => {
     if (fillTimer) return;
@@ -75,8 +101,17 @@
     observer.observe(root, { childList: true, subtree: true });
   };
 
+  const nearEnough = (list, position) => {
+    if (percent >= 100) {
+      const last = smallCards().at(-1);
+      return !last || last.getBoundingClientRect().top <= nearLimit();
+    }
+    const anchor = list[Math.min(position, list.length) - 1];
+    return !anchor || anchor.getBoundingClientRect().top <= nearLimit();
+  };
+
   function fill() {
-    if (!isOn(config) || config.paused) return;
+    if (!isOn(config) || config.paused || renderFailures >= RENDER_FAILURES_TO_STOP) return;
     const surf = surface();
     if (!surf) return;
     watchContainer(surf);
@@ -84,12 +119,11 @@
     const owed = slots.smallCardsOwed(list.length, percent);
     while (pending < MAX_PENDING && requested < owed) {
       const position = slots.targetAfter(requested, percent);
-      const anchor = list[Math.min(position, list.length) - 1];
-      if (anchor && anchor.getBoundingClientRect().top > innerHeight * (1 + NEAR_SCREENS)) return;
-      const seed = pickSeed(surf);
+      if (!nearEnough(list, position)) return;
+      const seed = surf === 'watch' ? watchSeed() : homeSeed(list, position);
       if (!seed) {
-        schedule(1000);
-        return;
+        if (surf === 'watch') schedule(1000);
+        return; // on home, new YouTube cards bring new seeds and wake this up
       }
       requested++;
       pending++;
@@ -103,32 +137,82 @@
     after.after(el);
   };
 
+  // Keeps rows complete: a card too many before a full-width section such as Shorts would leave a gap.
+  const fixRows = () => {
+    const root = containerFor('home');
+    const gridRoot = document.querySelector(S.homeGridRoot);
+    if (!root || !gridRoot) return;
+    const perRow = Number(getComputedStyle(gridRoot).getPropertyValue(ytPage.ITEMS_PER_ROW_VAR));
+    let segment = [];
+    for (const child of [...root.children]) {
+      if (child.matches(S.homeSection)) {
+        const extra = slots.cardsToMove(segment.length, perRow);
+        const moving = extra ? segment.slice(-extra) : [];
+        for (const el of [...moving].reverse()) child.after(el);
+        segment = moving;
+      } else if (child.matches(S.homeItem) && !isHidden(child)) {
+        segment.push(child);
+      }
+    }
+  };
+
   const place = async (card, asked) => {
     const surf = surface();
     const list = youTubeCards(surf);
-    if (!list.length) return;
-    const below = list.findIndex(el => el.getBoundingClientRect().top >= innerHeight);
-    const firstBelow = below < 0 ? list.length : below;
-    const position = Math.min(slots.nextPosition(placed, percent, firstBelow), list.length);
-    const anchor = list[Math.max(position, 1) - 1];
-    const el = cards.createWatchCard(card.lockup, anchor);
-    cards.prepareFade(el);
-    insertAfterSmallCards(anchor, el);
-    el.setAttribute(MARK, String(asked));
-    info.set(el, card);
-    placed++;
+    const shown = list.filter(el => !isHidden(el));
+    if (!shown.length) return false;
+    const below = shown.findIndex(belowScreen);
+    const firstBelow = below < 0 ? shown.length : below;
+
+    let anchor;
+    let replaced = null;
+    if (percent >= 100) {
+      if (below < 0) return false; // only replace off screen, so nothing swaps in view
+      replaced = shown[firstBelow];
+      anchor = replaced;
+    } else {
+      const position = Math.min(slots.nextPosition(placed, percent, firstBelow), shown.length);
+      anchor = shown[Math.max(position, 1) - 1];
+    }
+
     const referenceWidth = Math.round(anchor.getBoundingClientRect().width);
+    const el = surf === 'watch' ? cards.createWatchCard(card.lockup, anchor) : cards.createHomeCard(card.lockup, anchor);
+    cards.prepareFade(el);
+    if (replaced) replaced.before(el);
+    else insertAfterSmallCards(anchor, el);
+    el.setAttribute(MARK, String(asked));
+    placed++;
+
     const good = await cards.settle(el, referenceWidth);
     if (!good || !generation.isCurrent(asked)) {
       el.remove();
-      return;
+      placed--;
+      return false;
     }
     el.setAttribute(MARK, String(asked));
+    if (replaced) replaced.classList.add(HIDDEN);
+    cards.remember(el, card);
     cards.fadeIn(el);
+    if (surf === 'home') fixRows();
+    renderFailures = 0;
+    return true;
+  };
+
+  const unhideAll = () => {
+    for (const el of document.querySelectorAll(`.${HIDDEN}`)) el.classList.remove(HIDDEN);
   };
 
   const removeAll = () => {
+    const hadCards = smallCards().length > 0;
     for (const el of smallCards()) el.remove();
+    unhideAll();
+    if (hadCards && surface() === 'home') fixRows();
+  };
+
+  const removeCards = list => {
+    for (const el of list) el.remove();
+    if (surface() === 'home') fixRows();
+    schedule();
   };
 
   const restart = () => {
@@ -140,6 +224,8 @@
     placed = 0;
     pending = 0;
     seedRetries = 0;
+    renderFailures = 0;
+    seedUses = new Map();
     observer?.disconnect();
     observed = null;
     if (!isOn(config)) return;
@@ -159,10 +245,20 @@
     wait();
   };
 
-  const onCard = ({ generation: asked, card }) => {
+  const onCard = async ({ generation: asked, card }) => {
     if (!generation.isCurrent(asked)) return;
     pending = Math.max(0, pending - 1);
-    if (card) place(card, asked);
+    const onHome = surface() === 'home';
+    if (card) {
+      const good = await place(card, asked);
+      if (!generation.isCurrent(asked)) return;
+      if (!good) {
+        renderFailures++;
+        if (onHome) requested = Math.max(0, requested - 1);
+      }
+    } else if (onHome) {
+      requested = Math.max(0, requested - 1); // try another seed; each seed is only used a limited number of times
+    }
     schedule();
   };
 
@@ -171,21 +267,30 @@
     config = next;
     if (!isOn(config)) {
       removeAll();
-    } else if (!wasOn) {
-      restart();
-    } else {
-      schedule();
+      return;
     }
+    if (config.paused) unhideAll();
+    if (!wasOn) restart();
+    else schedule();
   };
 
   const start = sendMessage => {
     send = sendMessage;
+    const style = document.createElement('style');
+    style.textContent = `.${HIDDEN} { display: none !important; }`;
+    document.documentElement.append(style);
     // YouTube also fires this during the first load, which isn't a new page.
     document.addEventListener(ytPage.NAVIGATE_FINISH_EVENT, () => {
       if (location.href !== startedFor) restart();
     });
     addEventListener('scroll', () => schedule(), { passive: true });
+    addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (surface() === 'home' && smallCards().length) fixRows();
+      }, RESIZE_DELAY_MS);
+    }, { passive: true });
   };
 
-  (globalThis.SmallYT ??= {}).feed = { start, onCard, applyConfig, removeAll };
+  (globalThis.SmallYT ??= {}).feed = { start, onCard, applyConfig, removeAll, removeCards, smallCards };
 })();
