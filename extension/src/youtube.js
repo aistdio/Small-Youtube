@@ -192,10 +192,118 @@
 
   const continuationToken = json => collect(json, 'continuationCommand').pop()?.token ?? null;
 
+  const clone = value => JSON.parse(JSON.stringify(value));
+  const metaOf = lockup => lockup?.metadata?.lockupMetadataViewModel;
+
+  // Search results use a different format from cards, so a search result borrows the shape of a
+  // related-list card. Tracking and player data from the template must not carry over.
+  const DROPPED_FROM_TEMPLATE = new Set([
+    'trackingParams', 'clickTrackingParams', 'params', 'playerParams',
+    'loggingDirectives', 'loggingContext', 'attachmentRuns',
+  ]);
+  const TEXT_KEYS = /content|label|text|title/i;
+
+  const pickTemplate = candidates => candidates
+    .map(c => c.lockup)
+    .find(l => metaOf(l)?.image?.decoratedAvatarViewModel && l.contentImage?.thumbnailViewModel) ?? null;
+
+  const buildLockup = (template, candidate, hl) => {
+    const owner = candidate.renderer.ownerText.runs[0];
+    const browse = owner.navigationEndpoint.browseEndpoint;
+    const meta = metaOf(template);
+    const oldRows = meta.metadata.contentMetadataViewModel.metadataRows;
+    const everywhere = [
+      [template.contentId, candidate.id],
+      [channelIdIn(template), browse.browseId],
+      [(JSON.stringify(template).match(/"canonicalBaseUrl":"(\/[^"]+)"/) || [])[1], browse.canonicalBaseUrl],
+    ].filter(([from, to]) => from && to);
+    const inText = [
+      [meta.title.content, candidate.title],
+      [oldRows[0].metadataParts[0].text.content, candidate.channelName],
+    ].filter(([from, to]) => from && to);
+
+    const swap = (text, pairs) => pairs.reduce((s, [from, to]) => s.split(from).join(to), text);
+    const rewrite = (value, key = '') => {
+      if (Array.isArray(value)) return value.map(v => rewrite(v, key));
+      if (value && typeof value === 'object') {
+        const out = {};
+        for (const k in value) if (!DROPPED_FROM_TEMPLATE.has(k)) out[k] = rewrite(value[k], k);
+        return out;
+      }
+      if (typeof value !== 'string') return value;
+      return swap(TEXT_KEYS.test(key) ? swap(value, inText) : value, everywhere);
+    };
+
+    const built = rewrite(template);
+    built.contentId = candidate.id;
+    built.contentImage.thumbnailViewModel.image.sources = candidate.renderer.thumbnail.thumbnails;
+
+    const m = metaOf(built);
+    m.title.content = candidate.title;
+    const avatar = m.image?.decoratedAvatarViewModel?.avatar?.avatarViewModel?.image;
+    const newAvatar = candidate.renderer.channelThumbnailSupportedRenderers?.channelThumbnailWithLinkRenderer?.thumbnail?.thumbnails;
+    if (avatar && newAvatar) avatar.sources = newAvatar;
+
+    const rows = m.metadata.contentMetadataViewModel.metadataRows.slice(0, 2);
+    rows[0].metadataParts = rows[0].metadataParts.slice(0, 1);
+    rows[0].metadataParts[0].text.content = candidate.channelName;
+    const views = rows[1].metadataParts[0]?.text;
+    if (views) views.content = formatCount(candidate.views, hl);
+    const age = rows[1].metadataParts[1]?.text;
+    if (age) age.content = candidate.renderer.publishedTimeText?.simpleText ?? '';
+    m.metadata.contentMetadataViewModel.metadataRows = rows;
+
+    const setLength = value => {
+      if (!value || typeof value !== 'object') return;
+      const badge = value.thumbnailBadgeViewModel;
+      if (badge && /^\d+:\d{2}/.test(badge.text ?? '')) badge.text = candidate.renderer.lengthText.simpleText;
+      for (const k in value) setLength(value[k]);
+    };
+    setLength(built.contentImage);
+
+    const a11y = built.rendererContext?.accessibilityContext;
+    if (a11y) a11y.label = [candidate.title, candidate.channelName, candidate.renderer.viewCountText?.simpleText, age?.content].filter(Boolean).join(', ');
+    return built;
+  };
+
+  const setLockupTitle = (lockup, title) => {
+    const out = clone(lockup);
+    metaOf(out).title.content = title;
+    return out;
+  };
+
+  const findList = value => {
+    if (!value || typeof value !== 'object') return null;
+    if (Array.isArray(value.listItems)) return value.listItems;
+    for (const k in value) {
+      const found = findList(value[k]);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const addMenuEntries = (lockup, labels) => {
+    const out = clone(lockup);
+    const list = findList(metaOf(out)?.menuButton);
+    if (!list?.length) return out;
+    const setTitle = (value, label) => {
+      if (!value || typeof value !== 'object') return;
+      if (typeof value.title?.content === 'string') value.title.content = label;
+      for (const k in value) setTitle(value[k], label);
+    };
+    for (const label of labels) {
+      const entry = clone(list[list.length - 1]);
+      setTitle(entry, label);
+      list.push(entry);
+    }
+    return out;
+  };
+
   (globalThis.SmallYT ??= {}).yt = {
     ORIGINAL_TRACK_SUFFIX, AUTODUB_TRACK_SUFFIX, VIDEO_FILTER, CHANNEL_VIDEOS_TAB, SELECTORS, ENDPOINTS,
     NAVIGATE_FINISH_EVENT, LANGUAGE_PANEL_REQUEST, ITEMS_PER_ROW_VAR,
     parseCount, formatCount, parseSearch, parseNext, parseSearchPage, parseWatchRelated,
     parseSubscribers, parseTags, parseWatchPage, continuationToken, collect,
+    pickTemplate, buildLockup, setLockupTitle, addMenuEntries,
   };
 })();
