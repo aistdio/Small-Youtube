@@ -20,6 +20,20 @@ test('every file the manifest lists exists', () => {
   for (const f of files) assert.ok(fs.existsSync(path.join(ROOT, 'extension', f)), f);
 });
 
+test('the manifest has nothing Chrome reports as an error', () => {
+  const m = read();
+  assert.equal(m.background.scripts, undefined); // Firefox's form; scripts/build-firefox.mjs adds it there
+  assert.equal(m.background.service_worker, 'src/background.js');
+});
+
+test('the Firefox manifest uses background scripts instead of a service worker', async () => {
+  const { firefoxManifest } = await import('../../scripts/build-firefox.mjs');
+  const m = firefoxManifest(read());
+  assert.deepEqual(m.background, { scripts: ['src/background.js'] });
+  assert.equal(m.minimum_chrome_version, undefined);
+  assert.ok(m.browser_specific_settings.gecko.id);
+});
+
 test('no file is listed twice, because Chrome only injects it once', () => {
   const files = read().content_scripts.flatMap(c => c.js);
   assert.equal(new Set(files).size, files.length);

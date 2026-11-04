@@ -7,7 +7,8 @@
   "scripts": {
     "test": "node --test tests/unit/",
     "e2e": "node tests/e2e/run.mjs",
-    "lint": "web-ext lint --source-dir extension",
+    "build:firefox": "node scripts/build-firefox.mjs",
+    "lint": "node scripts/build-firefox.mjs && web-ext lint --source-dir dist/firefox",
     "fixtures": "node tests/e2e/capture-fixtures.mjs"
   },
   "devDependencies": {
