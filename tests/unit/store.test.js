@@ -22,7 +22,7 @@ test('settings round trip through normalize', async () => {
   assert.equal((await store.getSettings()).share, 25);
   await store.setSettings({ share: 50 });
   assert.equal((await store.getSettings()).share, 50);
-  await store.setSettings({ share: 7 });
+  await store.setSettings({ share: 700 });
   assert.equal((await store.getSettings()).share, 25);
 });
 

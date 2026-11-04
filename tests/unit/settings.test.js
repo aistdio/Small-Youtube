@@ -18,7 +18,9 @@ test('defaults match the design', () => {
 });
 
 test('odd settings become valid', () => {
-  assert.equal(normalize({ share: 33 }).share, 25);
+  assert.equal(normalize({ share: 33 }).share, 33); // typed into the value box
+  assert.equal(normalize({ share: 150 }).share, 25);
+  assert.equal(normalize({ share: 'x' }).share, 25);
   assert.equal(normalize({ share: 'random' }).share, 'random');
   assert.equal(normalize({ subsMin: 'abc' }).subsMin, 10);
   const swapped = normalize({ subsMin: 5000, subsMax: 100 });

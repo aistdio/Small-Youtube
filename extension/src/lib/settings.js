@@ -25,12 +25,13 @@
     return Math.max(0, Math.floor(value));
   };
   const flag = (value, fallback) => (typeof value === 'boolean' ? value : fallback);
+  const isShare = value => value === 'random' || (Number.isInteger(value) && value >= 0 && value <= 100);
 
   const normalize = raw => {
     const r = raw && typeof raw === 'object' ? raw : {};
     const out = {
       enabled: flag(r.enabled, DEFAULTS.enabled),
-      share: SHARES.includes(r.share) ? r.share : DEFAULTS.share,
+      share: isShare(r.share) ? r.share : DEFAULTS.share,
       subsMin: count(r.subsMin, DEFAULTS.subsMin),
       subsMax: count(r.subsMax, DEFAULTS.subsMax, true),
       viewsMin: count(r.viewsMin, DEFAULTS.viewsMin),

@@ -1,4 +1,95 @@
 {
-  "menuLessTopic": { "message": "Less of this topic" },
-  "menuHideChannel": { "message": "Hide this channel" }
+  "menuLessTopic": {
+    "message": "Less of this topic"
+  },
+  "menuHideChannel": {
+    "message": "Hide this channel"
+  },
+  "shareHeading": {
+    "message": "Small channels in your feed"
+  },
+  "random": {
+    "message": "Random"
+  },
+  "smallHeading": {
+    "message": "What counts as small"
+  },
+  "subscribers": {
+    "message": "Subscribers"
+  },
+  "views": {
+    "message": "Video views"
+  },
+  "minimum": {
+    "message": "Minimum"
+  },
+  "maximum": {
+    "message": "Maximum"
+  },
+  "noLimit": {
+    "message": "∞"
+  },
+  "skipDubbed": {
+    "message": "Skip auto-dubbed videos"
+  },
+  "myLanguages": {
+    "message": "My languages"
+  },
+  "addLanguage": {
+    "message": "Add language"
+  },
+  "remove": {
+    "message": "Remove"
+  },
+  "showUnknown": {
+    "message": "Show videos with unknown language"
+  },
+  "useAccount": {
+    "message": "Use my account for searches"
+  },
+  "useAccountHint": {
+    "message": "Closer to your taste, but searches appear in your YouTube history."
+  },
+  "hiddenList": {
+    "message": "Hidden channels and topics"
+  },
+  "hiddenEmpty": {
+    "message": "Nothing hidden yet."
+  },
+  "undo": {
+    "message": "Undo"
+  },
+  "pausedNotice": {
+    "message": "Paused for {minutes} min to stay within YouTube's limits."
+  },
+  "budgetNotice": {
+    "message": "Daily limit reached. New cards return tomorrow."
+  },
+  "turnOn": {
+    "message": "Turn on"
+  },
+  "turnOff": {
+    "message": "Turn off"
+  },
+  "welcomeHeading": {
+    "message": "Pin Small-Youtube to your toolbar"
+  },
+  "welcomeIntro": {
+    "message": "You'll use its icon to choose how many small channels you see. Small channels already appear on YouTube at 25%."
+  },
+  "stepPuzzle": {
+    "message": "Click the puzzle icon at the top right of your browser."
+  },
+  "stepPin": {
+    "message": "Click the pin next to Small-Youtube."
+  },
+  "pinnedHeading": {
+    "message": "Pinned"
+  },
+  "pinnedText": {
+    "message": "Click the icon anytime to change how many small channels you see. You can close this tab."
+  },
+  "noLimitTitle": {
+    "message": "No limit"
+  }
 }

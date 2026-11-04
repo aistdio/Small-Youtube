@@ -1,4 +1,95 @@
 {
-  "menuLessTopic": { "message": "Меньше по этой теме" },
-  "menuHideChannel": { "message": "Скрыть этот канал" }
+  "menuLessTopic": {
+    "message": "Меньше по этой теме"
+  },
+  "menuHideChannel": {
+    "message": "Скрыть этот канал"
+  },
+  "shareHeading": {
+    "message": "Маленькие каналы в ленте"
+  },
+  "random": {
+    "message": "Случайно"
+  },
+  "smallHeading": {
+    "message": "Что считать маленьким"
+  },
+  "subscribers": {
+    "message": "Подписчики"
+  },
+  "views": {
+    "message": "Просмотры видео"
+  },
+  "minimum": {
+    "message": "Минимум"
+  },
+  "maximum": {
+    "message": "Максимум"
+  },
+  "noLimit": {
+    "message": "∞"
+  },
+  "skipDubbed": {
+    "message": "Пропускать видео с автодубляжем"
+  },
+  "myLanguages": {
+    "message": "Мои языки"
+  },
+  "addLanguage": {
+    "message": "Добавить язык"
+  },
+  "remove": {
+    "message": "Убрать"
+  },
+  "showUnknown": {
+    "message": "Показывать видео на неизвестном языке"
+  },
+  "useAccount": {
+    "message": "Искать через мой аккаунт"
+  },
+  "useAccountHint": {
+    "message": "Ближе к вашим вкусам, но запросы появятся в истории поиска YouTube."
+  },
+  "hiddenList": {
+    "message": "Скрытые каналы и темы"
+  },
+  "hiddenEmpty": {
+    "message": "Пока ничего не скрыто."
+  },
+  "undo": {
+    "message": "Вернуть"
+  },
+  "pausedNotice": {
+    "message": "Пауза на {minutes} мин., чтобы не превышать лимиты YouTube."
+  },
+  "budgetNotice": {
+    "message": "Дневной лимит исчерпан. Новые карточки появятся завтра."
+  },
+  "turnOn": {
+    "message": "Включить"
+  },
+  "turnOff": {
+    "message": "Выключить"
+  },
+  "welcomeHeading": {
+    "message": "Закрепите Small-Youtube на панели"
+  },
+  "welcomeIntro": {
+    "message": "Через значок можно выбрать, сколько маленьких каналов показывать. Они уже появляются на YouTube: 25% ленты."
+  },
+  "stepPuzzle": {
+    "message": "Нажмите значок пазла вверху справа в браузере."
+  },
+  "stepPin": {
+    "message": "Нажмите кнопку закрепления рядом с Small-Youtube."
+  },
+  "pinnedHeading": {
+    "message": "Закреплено"
+  },
+  "pinnedText": {
+    "message": "Нажмите значок, чтобы изменить, сколько маленьких каналов показывать. Эту вкладку можно закрыть."
+  },
+  "noLimitTitle": {
+    "message": "Без лимита"
+  }
 }

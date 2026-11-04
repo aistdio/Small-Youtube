@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Small-Youtube</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main>
+    <section class="share">
+      <h1 id="share-label" data-i18n="shareHeading"></h1>
+      <div class="preview" id="preview" aria-hidden="true"></div>
+      <div class="control">
+        <div class="track" data-track="share">
+          <input id="share-slider" type="range" min="0" max="1" step="0.001" aria-labelledby="share-label">
+        </div>
+        <input class="value" id="share-value" type="text" inputmode="numeric" autocomplete="off" aria-labelledby="share-label">
+      </div>
+    </section>
+
+    <p class="divider"><span data-i18n="smallHeading"></span></p>
+
+    <section class="range">
+      <h2 id="subs-label" data-i18n="subscribers"></h2>
+      <div class="control">
+        <div class="track double" data-track="subs">
+          <input id="subs-min-slider" type="range" min="0" max="1" step="0.001" data-i18n-aria="minimum">
+          <input id="subs-max-slider" type="range" min="0" max="1" step="0.001" data-i18n-aria="maximum">
+        </div>
+        <input class="value" id="subs-min" type="text" autocomplete="off" data-i18n-aria="minimum">
+        <input class="value" id="subs-max" type="text" autocomplete="off" data-i18n-aria="maximum">
+      </div>
+    </section>
+
+    <section class="range">
+      <h2 id="views-label" data-i18n="views"></h2>
+      <div class="control">
+        <div class="track double" data-track="views">
+          <input id="views-min-slider" type="range" min="0" max="1" step="0.001" data-i18n-aria="minimum">
+          <input id="views-max-slider" type="range" min="0" max="1" step="0.001" data-i18n-aria="maximum">
+        </div>
+        <input class="value" id="views-min" type="text" autocomplete="off" data-i18n-aria="minimum">
+        <input class="value" id="views-max" type="text" autocomplete="off" data-i18n-aria="maximum">
+      </div>
+    </section>
+
+    <section class="settings">
+      <label class="switch">
+        <span data-i18n="skipDubbed"></span>
+        <input id="skip-dubbed" type="checkbox" role="switch">
+      </label>
+
+      <div class="languages">
+        <span id="languages-label" data-i18n="myLanguages"></span>
+        <ul id="languages" aria-labelledby="languages-label"></ul>
+        <select id="add-language" data-i18n-aria="addLanguage"></select>
+      </div>
+
+      <label class="switch">
+        <span data-i18n="showUnknown"></span>
+        <input id="show-unknown" type="checkbox" role="switch">
+      </label>
+
+      <label class="switch">
+        <span>
+          <span data-i18n="useAccount"></span>
+          <small data-i18n="useAccountHint"></small>
+        </span>
+        <input id="use-account" type="checkbox" role="switch">
+      </label>
+
+      <details id="hidden-list">
+        <summary data-i18n="hiddenList"></summary>
+        <ul id="blocks"></ul>
+        <p id="blocks-empty" data-i18n="hiddenEmpty"></p>
+      </details>
+    </section>
+
+    <p class="notice" id="notice" role="status" hidden></p>
+
+    <button class="power" id="power" type="button"></button>
+  </main>
+
+  <script src="../src/lib/settings.js"></script>
+  <script src="../src/content/store.js"></script>
+  <script src="scale.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
