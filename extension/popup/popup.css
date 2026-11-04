@@ -34,15 +34,15 @@ html, body {
 }
 
 body {
-  width: min(360px, 100vw);
+  width: 360px; /* fixed: a real popup starts tiny and grows to fit its page */
   font: 13px/1.4 system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
 main {
   display: grid;
-  gap: 14px;
-  padding: 16px;
+  gap: 10px;
+  padding: 14px 16px;
 }
 
 h1, h2 {
@@ -57,12 +57,12 @@ h1 { font-size: 15px; }
 .preview {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 5px;
-  margin-bottom: 10px;
+  gap: 4px;
+  margin-bottom: 6px;
 }
 
 .tile {
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 2 / 1;
   border-radius: 3px;
   background: var(--tile);
   transition: background-color 180ms ease;
@@ -165,8 +165,8 @@ h1 { font-size: 15px; }
 
 .settings {
   display: grid;
-  gap: 10px;
-  padding-top: 12px;
+  gap: 8px;
+  padding-top: 10px;
   border-top: 1px solid var(--line);
 }
 
@@ -266,11 +266,13 @@ details summary { cursor: pointer; }
 }
 
 .power {
+  position: sticky; /* stays reachable when many languages make the popup scroll */
+  bottom: 8px;
   width: 100%;
-  padding: 9px;
+  padding: 8px;
   border: 1px solid var(--accent);
   border-radius: 6px;
-  background: none;
+  background: var(--paper);
   color: inherit;
   font: inherit;
   font-weight: 600;

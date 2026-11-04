@@ -99,7 +99,7 @@ const extensionId = async ctx => {
 const checkPopup = async (ctx, setup) => {
   const id = await extensionId(ctx);
   const popup = await ctx.newPage();
-  await popup.setViewportSize({ width: 320, height: 800 });
+  await popup.setViewportSize({ width: 360, height: 800 });
   await popup.goto(`chrome-extension://${id}/popup/popup.html`);
   await popup.waitForFunction(() => document.getElementById('share-value').value !== '');
   const value = sel => popup.locator(sel).inputValue();
@@ -149,7 +149,13 @@ const checkPopup = async (ctx, setup) => {
   await popup.locator('#power').click();
   assert.equal((await stored()).enabled, true);
 
+  // A real popup starts with a tiny viewport and grows to fit the page, so the page must not depend on it.
+  await popup.setViewportSize({ width: 200, height: 600 });
+  assert.equal(await popup.evaluate(() => getComputedStyle(document.body).width), '360px', 'width does not follow the viewport');
+  await popup.setViewportSize({ width: 360, height: 600 });
   assert.equal(await popup.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true, 'no sideways scroll');
+  const height = await popup.evaluate(() => document.documentElement.scrollHeight);
+  assert.ok(height <= 600, `fits Chrome's 600 px popup limit, was ${height}`);
   assert.equal(await popup.locator('main > :last-child').getAttribute('id'), 'power', 'the on/off button is at the very bottom');
   if (process.env.E2E_SHOTS) {
     await popup.locator('#hidden-list').evaluate(d => { d.open = true; });
