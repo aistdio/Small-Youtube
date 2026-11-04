@@ -174,6 +174,19 @@ Tested on 2026-11-04 on one connection. Load and history tests ran as page scrip
 
 Native cards also passed in a logged-in Chrome: home card look, ⋮ menu with added entries, and our click handler running instead of YouTube's action.
 
+| Real extension in a logged-in Chrome | Result |
+|---|---|
+| Home feed at 25% | Cards native-looking, same size as neighbours, rows complete, no page jump |
+| Account languages | Read once, saved, frame removed |
+| ⋮ menu | Both entries work; card removed, no Share dialog, block saved |
+| 100% | 3 cards replaced below the screen after about 30 s; nothing on screen changed |
+| Forced pause | All hidden cards came back |
+| OFF | All small cards removed without a reload |
+| Language check | 0 of the last 10 picks default to an auto-dub |
+| Watch history after 43 picks shown, none clicked | 0 appeared |
+| Search history, defaults | 0 new entries |
+| Search history, "Use my account" on for about 30 s | 4 new entries, as its hint warns; 4 cards |
+
 | Size and account-list test | Result |
 |---|---|
 | Home card vs neighbour at 2, 3, 4, 5 and 6 per row (logged-in Chrome, row count forced by CSS) | Same width and height; thumbnail within 1 px |
@@ -207,8 +220,8 @@ Quality signal so far: of 5 picks reviewed by hand, 4 passed on quality, and 1 f
 
 ## Not yet known
 
-- The real extension while logged in. Check this first once it's loaded. Its parts were tested separately.
-- The hidden-frame language lookup from a real extension, and on accounts using other display languages.
+- The hidden-frame language lookup on accounts using other display languages.
+- Whether background tabs really hold their requests in a real browser. It's unit-tested, but the automation tool makes every tab report itself as visible.
 - On template-built cards: hover preview, and what the ⋮ menu actions do when clicked.
 - Getting the short view count from search results in every language. Removing the last word worked for English and Russian, but won't work everywhere.
 - The combined ranking and the keywords-plus-tags method, which haven't been tested end to end.
