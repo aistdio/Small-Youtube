@@ -56,7 +56,7 @@ Fetch the video's normal page with the user's account, so YouTube's own decision
 | Default audio is an auto-dub (track id ends `.10`) | Skip |
 | Original language is in "My languages" | Keep |
 | Original language is not in "My languages" | Skip |
-| No clear language | Skip, unless "Show videos with unknown language" is on |
+| No clear language | Skip, unless "Add videos in unknown languages" is on |
 
 Related-list cards sometimes already carry YouTube's "Auto-dubbed" label. Skip those early, before spending a page fetch. The label's text is localized, but its `iconName` (`PERSON_RADAR_FILLED`) isn't, so match on that.
 
@@ -74,7 +74,7 @@ With "Add videos labelled as AI" off, a video carrying YouTube's AI label is ski
 
 **How the list is read:** the first time `ytcfg` reports a logged-in user, load `/account_playback` in a hidden same-site frame. This happens once: save the result and don't read it again. A failed attempt doesn't count, so retry on a later page load, at most once a day. Find the settings link by structure, not by its text, which is localized: the attributed-string link without an external `href`. Open the dialog with synthetic pointer and mouse events, read the checked rows, and map their labels to codes through the `get_panel` response. Then remove the frame. Never press the dialog's confirm button. YouTube's own code makes the signed request, so the extension never touches a login secret.
 
-With "Skip auto-dubbed videos" off, a video whose default audio is an auto-dub is kept. Every other video still goes through the language rules, so the page fetch, "My languages" and the unknown-language setting all stay in use.
+With "Don't add auto-dubbed videos" off, a video whose default audio is an auto-dub is kept. Every other video still goes through the language rules, so the page fetch, "My languages" and the unknown-language setting all stay in use.
 
 ## Using the account
 
@@ -118,10 +118,10 @@ From top to bottom:
 - **Views range:** two handles; same stops; default 0 to no limit.
 - Each slider shows its value on the right in a box the user can click and type into, including values between stops.
 - **Settings**, one line each:
-  - Skip auto-dubbed videos (on)
+  - Don't add auto-dubbed videos (on)
   - Add videos labelled as AI (on)
   - My languages: English ×, German ×, French ×, + (example; filled automatically)
-  - Show videos with unknown language (off)
+  - Add videos in unknown languages (off)
   - Use my account for searches (off). Hint: "Closer to your taste, but searches appear in your YouTube history."
 - **Hidden channels and topics:** a small link to the list, with undo.
 - **ON/OFF button** at the very bottom.
@@ -257,7 +257,7 @@ One Manifest V3 codebase in plain JavaScript with no framework. Chrome, Edge, Br
 
 - Slider ratios, 100% gradually replacing YouTube's cards, and "Random" meaning a new share per feed load.
 - Positions coming from the slider ratio rather than the seed, and fetching only in the visible tab.
-- "Skip auto-dubbed videos" off meaning dubbed videos are allowed while other videos still get the language rules.
+- "Don't add auto-dubbed videos" off meaning dubbed videos are allowed while other videos still get the language rules.
 - The same slider on the watch page.
 - Ranking details: pick among the top 3, 8 lookups per card, 60-second minimum, 300k pre-filter, near-copy filter.
 - The two ⋮ menu choices and how "Less of this topic" works.

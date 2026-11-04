@@ -30,7 +30,7 @@
     "message": "∞"
   },
   "skipDubbed": {
-    "message": "Skip auto-dubbed videos"
+    "message": "Don't add auto-dubbed videos"
   },
   "myLanguages": {
     "message": "My languages"
@@ -42,7 +42,7 @@
     "message": "Remove"
   },
   "showUnknown": {
-    "message": "Show videos with unknown language"
+    "message": "Add videos in unknown languages"
   },
   "useAccount": {
     "message": "Use my account for searches"
