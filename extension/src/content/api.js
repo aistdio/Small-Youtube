@@ -29,8 +29,9 @@
 
     const page = async url => {
       const response = await queue.run('account', async () => {
-        const r = await fetchFn(url, { credentials: 'include' });
-        return { status: r.status, finalUrl: r.url, body: await r.text() };
+        // Following a redirect to another site would fail as a network error, hiding what happened.
+        const r = await fetchFn(url, { credentials: 'include', redirect: 'manual' });
+        return { status: r.status, finalUrl: r.url, redirected: r.type === 'opaqueredirect', body: await r.text() };
       });
       return response.body;
     };

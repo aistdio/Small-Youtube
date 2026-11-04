@@ -31,7 +31,7 @@
   let observed = null;
   let startedFor = null;
   let seedUses = new Map();
-  let lastPosition = null;
+  let positionOffset = 0;
 
   const isOn = c => !!c?.settings?.enabled && c.settings.share !== 0;
   const surface = () => {
@@ -103,12 +103,15 @@
   };
 
   const nearEnough = (list, position) => {
-    if (percent >= 100) {
-      const last = smallCards().at(-1);
-      return !last || last.getBoundingClientRect().top <= nearLimit();
-    }
     const anchor = list[Math.min(position, list.length) - 1];
-    return !anchor || anchor.getBoundingClientRect().top <= nearLimit();
+    const last = smallCards().at(-1);
+    return slots.mayRequest({
+      percent,
+      anchorTop: anchor ? anchor.getBoundingClientRect().top : null,
+      lastSmallTop: last ? last.getBoundingClientRect().top : null,
+      hasShownBelow: list.some(el => !isHidden(el) && belowScreen(el)),
+      limit: nearLimit(),
+    });
   };
 
   function fill() {
@@ -161,20 +164,20 @@
     const surf = surface();
     const list = youTubeCards(surf);
     const shown = list.filter(el => !isHidden(el));
-    if (!shown.length) return false;
+    if (!shown.length) return 'no-position';
     const below = shown.findIndex(belowScreen);
     const firstBelow = below < 0 ? shown.length : below;
 
     let anchor;
     let replaced = null;
     if (percent >= 100) {
-      if (below < 0) return false; // only replace off screen, so nothing swaps in view
+      if (below < 0) return 'no-position'; // only replace off screen, so nothing swaps in view
       replaced = shown[firstBelow];
       anchor = replaced;
     } else {
-      const position = Math.min(slots.nextPosition(placed, percent, firstBelow, lastPosition), shown.length);
-      lastPosition = position;
-      anchor = shown[Math.max(position, 1) - 1];
+      const { position, offset } = slots.placeAfter(placed, percent, firstBelow, positionOffset);
+      positionOffset = offset;
+      anchor = shown[Math.max(Math.min(position, shown.length), 1) - 1];
     }
 
     const referenceWidth = Math.round(anchor.getBoundingClientRect().width);
@@ -186,10 +189,17 @@
     placed++;
 
     const good = await cards.settle(el, referenceWidth);
-    if (!good || !generation.isCurrent(asked)) {
+    const wanted = slots.cardStillWanted({
+      current: generation.isCurrent(asked),
+      on: isOn(config),
+      paused: !!config?.paused,
+      replacing: !!replaced,
+      replacedBelow: !!replaced && belowScreen(replaced),
+    });
+    if (!good || !wanted) {
       el.remove();
-      placed--;
-      return false;
+      if (generation.isCurrent(asked)) placed--;
+      return good ? 'no-position' : 'failed';
     }
     el.setAttribute(MARK, String(asked));
     if (replaced) replaced.classList.add(HIDDEN);
@@ -197,7 +207,7 @@
     cards.fadeIn(el);
     if (surf === 'home') fixRows();
     renderFailures = 0;
-    return true;
+    return 'placed';
   };
 
   const unhideAll = () => {
@@ -228,7 +238,7 @@
     seedRetries = 0;
     renderFailures = 0;
     seedUses = new Map();
-    lastPosition = null;
+    positionOffset = 0;
     observer?.disconnect();
     observed = null;
     if (!isOn(config)) return;
@@ -252,15 +262,14 @@
     if (!generation.isCurrent(asked)) return;
     pending = Math.max(0, pending - 1);
     const onHome = surface() === 'home';
-    if (card) {
-      const good = await place(card, asked);
+    const giveBackSlot = () => { requested = Math.max(0, requested - 1); };
+    if (card && !config?.paused) {
+      const result = await place(card, asked);
       if (!generation.isCurrent(asked)) return;
-      if (!good) {
-        renderFailures++;
-        if (onHome) requested = Math.max(0, requested - 1);
-      }
-    } else if (onHome) {
-      requested = Math.max(0, requested - 1); // try another seed; each seed is only used a limited number of times
+      if (result === 'failed') renderFailures++;
+      if (result !== 'placed') giveBackSlot();
+    } else if (card || onHome) {
+      giveBackSlot(); // try another seed later; each seed is only used a limited number of times
     }
     schedule();
   };
@@ -269,6 +278,8 @@
     const wasOn = isOn(config);
     config = next;
     if (!isOn(config)) {
+      const asked = generation.bump(); // cards still on their way are now from an old page
+      document.documentElement.setAttribute('data-small-yt-page', String(asked));
       removeAll();
       return;
     }

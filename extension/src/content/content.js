@@ -2,7 +2,7 @@
 (() => {
   const { settings: settingsLib, store: storeLib, queue: queueLib, api: apiLib, pipeline: pipelineLib } = globalThis.SmallYT;
   const NS = 'small-yt';
-  const HALT_CHECK_MS = 60000;
+  const STATUS_CHECK_MS = 5000;
 
   const send = (type, data = {}) => window.postMessage({ ns: NS, from: 'content', type, ...data }, location.origin);
 
@@ -71,7 +71,7 @@
     needCard: async ({ slotId, generation, seed }) => {
       const settings = await store.getSettings();
       const card = settings.enabled && !queue.isHalted() ? await pipeline.findCard(seed, settings, labels()) : null;
-      send(card ? 'card' : 'noCard', { slotId, generation, card });
+      if (!orphaned) send(card ? 'card' : 'noCard', { slotId, generation, card });
     },
     hideChannel: async ({ channelId, channelName }) => {
       await store.hideChannel(channelId, channelName);
@@ -81,8 +81,21 @@
     },
   };
 
+  // After an update, reload or removal this script keeps running without an extension behind it.
+  let orphaned = false;
+  let statusTimer = null;
+  const stopIfOrphaned = () => {
+    if (orphaned) return true;
+    if (store.isAlive()) return false;
+    orphaned = true;
+    clearInterval(statusTimer);
+    send('config', { settings: { ...settingsLib.DEFAULTS, enabled: false }, paused: true, labels: [] });
+    return true;
+  };
+
   window.addEventListener('message', e => {
     if (e.source !== window || e.data?.ns !== NS || e.data.from !== 'page') return;
+    if (stopIfOrphaned()) return;
     handlers[e.data.type]?.(e.data).catch(() => {});
   });
 
@@ -90,7 +103,9 @@
     if (changes.settings) sendConfig().catch(() => {});
   });
   queue.onPauseChange(() => sendConfig().catch(() => {}));
-  setInterval(() => queue.isHalted(), HALT_CHECK_MS);
+  statusTimer = setInterval(() => {
+    if (!stopIfOrphaned()) queue.isHalted();
+  }, STATUS_CHECK_MS);
 
   send('hello');
 })();

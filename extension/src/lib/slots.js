@@ -14,13 +14,23 @@
     return Math.ceil(((i + 1) * (100 - percent)) / percent);
   };
 
-  // How many YouTube cards separate two small cards. Above 50% small cards sit side by side.
-  const spacing = percent => (percent > 0 && percent <= 50 ? Math.ceil((100 - percent) / percent) : 0);
+  // Cards can't go above the screen, so the whole pattern shifts down instead of bunching up.
+  const placeAfter = (i, percent, firstBelowScreen, offset) => {
+    const target = targetAfter(i, percent);
+    const nextOffset = Math.max(offset, firstBelowScreen - target);
+    return { position: target + nextOffset, offset: nextOffset };
+  };
 
-  const nextPosition = (i, percent, firstBelowScreen, previous = null) => Math.max(
-    targetAfter(i, percent),
-    firstBelowScreen,
-    previous === null ? 0 : previous + spacing(percent),
+  // Above 50% the position barely moves, so the last small card shows how far the fill has got.
+  const mayRequest = ({ percent, anchorTop, lastSmallTop, hasShownBelow, limit }) => {
+    if (percent >= 100 && !hasShownBelow) return false;
+    if (percent > 50) return lastSmallTop == null || lastSmallTop <= limit;
+    return anchorTop == null || anchorTop <= limit;
+  };
+
+  // Things can change during the seconds a card takes to render.
+  const cardStillWanted = ({ current, on, paused, replacing, replacedBelow }) => (
+    current && on && (!replacing || (replacedBelow && !paused))
   );
 
   const cardsToMove = (segmentCount, perRow) => (perRow > 0 ? segmentCount % perRow : 0);
@@ -35,6 +45,6 @@
   };
 
   (globalThis.SmallYT ??= {}).slots = {
-    resolveShare, smallCardsOwed, targetAfter, nextPosition, cardsToMove, createGeneration,
+    resolveShare, smallCardsOwed, targetAfter, placeAfter, mayRequest, cardStillWanted, cardsToMove, createGeneration,
   };
 })();

@@ -23,7 +23,19 @@
       }
     };
 
-    const getSettings = async () => normalize(await get('settings'));
+    const isAlive = () => {
+      try {
+        return !!chromeApi.runtime?.id;
+      } catch {
+        return false;
+      }
+    };
+
+    // Saved settings can't be read once the context is gone, and defaults must not switch anything on.
+    const getSettings = async () => {
+      const settings = normalize(await get('settings'));
+      return isAlive() ? settings : { ...settings, enabled: false };
+    };
     const setSettings = async patch => set('settings', normalize({ ...(await get('settings')), ...patch }));
 
     const getSubs = async channelId => {
@@ -74,7 +86,7 @@
     };
 
     return {
-      getSettings, setSettings, getSubs, setSubs, getShown, addShown, getBlocks, hideChannel, muteTopic,
+      isAlive, getSettings, setSettings, getSubs, setSubs, getShown, addShown, getBlocks, hideChannel, muteTopic,
       muteSeedChannel, unblock, onChange, getState: get, setState: set,
     };
   };

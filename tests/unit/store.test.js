@@ -81,9 +81,15 @@ test('invalidated extension context stops quietly', async () => {
     storage: { local: { get: throwing, set: throwing }, onChanged: { addListener: throwing } },
   };
   const store = createStore(dead, Date.now);
-  assert.deepEqual(await store.getSettings(), DEFAULTS);
+  assert.equal(store.isAlive(), false);
+  assert.deepEqual(await store.getSettings(), { ...DEFAULTS, enabled: false }); // must never switch itself on
   await store.addShown('abc');
   await store.setSettings({ share: 50 });
   assert.equal(await store.getSubs('UC1'), undefined);
   store.onChange(() => {});
+});
+
+test('a working extension context is alive', () => {
+  const { store } = make();
+  assert.equal(store.isAlive(), true);
 });

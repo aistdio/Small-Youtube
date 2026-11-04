@@ -2,8 +2,9 @@
 // src/youtube.js holds the data side. When YouTube changes something, start with these two files.
 (() => {
   const SELECTORS = {
-    homeGridRoot: 'ytd-rich-grid-renderer',
-    homeGrid: 'ytd-rich-grid-renderer #contents',
+    // YouTube keeps earlier pages hidden in the document, so this must name the home page.
+    homeGridRoot: 'ytd-browse[page-subtype="home"] ytd-rich-grid-renderer',
+    homeGrid: 'ytd-browse[page-subtype="home"] ytd-rich-grid-renderer #contents',
     homeItem: 'ytd-rich-item-renderer',
     homeSection: 'ytd-rich-section-renderer',
     ad: 'ytd-ad-slot-renderer',

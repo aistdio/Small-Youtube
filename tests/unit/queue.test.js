@@ -137,3 +137,29 @@ test('a hidden tab holds its requests until visible', async () => {
   await running;
   assert.equal(called, 1);
 });
+
+const redirected = async () => ({ status: 0, redirected: true, body: '' });
+
+test('a redirected page fetch comes back as an empty page, without pausing', async () => {
+  const { q } = fresh();
+  for (let i = 0; i < 4; i++) {
+    const response = await q.run('account', redirected);
+    assert.equal(response.body, '');
+  }
+  assert.equal(q.isPaused(), false);
+});
+
+test('a success resets the redirect count', async () => {
+  const { q } = fresh();
+  for (let i = 0; i < 4; i++) await q.run('account', redirected);
+  await q.run('account', ok);
+  for (let i = 0; i < 4; i++) await q.run('account', redirected);
+  assert.equal(q.isPaused(), false);
+});
+
+test('every page redirecting pauses, because it may be a captcha', async () => {
+  const { q } = fresh();
+  for (let i = 0; i < 4; i++) await q.run('account', redirected);
+  await assert.rejects(q.run('account', redirected), { reason: 'paused' });
+  assert.equal(q.isPaused(), true);
+});

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import '../../extension/src/lib/slots.js';
 
-const { resolveShare, smallCardsOwed, targetAfter, nextPosition, cardsToMove, createGeneration } = globalThis.SmallYT?.slots ?? {};
+const { resolveShare, smallCardsOwed, targetAfter, placeAfter, mayRequest, cardStillWanted, cardsToMove, createGeneration } = globalThis.SmallYT?.slots ?? {};
 
 test('slider ratios from the design', () => {
   assert.equal(smallCardsOwed(30, 0), 0);
@@ -29,8 +29,51 @@ test('random picks a new share within range', () => {
 });
 
 test('positions never land above the screen', () => {
-  assert.equal(nextPosition(0, 25, 12), 12);
-  assert.equal(nextPosition(5, 25, 2), 18);
+  assert.deepEqual(placeAfter(0, 25, 12, 0), { position: 12, offset: 9 });
+  assert.deepEqual(placeAfter(5, 25, 2, 0), { position: 18, offset: 0 });
+});
+
+const positions = (percent, firstBelow, count) => {
+  let offset = 0;
+  return Array.from({ length: count }, (_, i) => {
+    const placed = placeAfter(i, percent, firstBelow, offset);
+    offset = placed.offset;
+    return placed.position;
+  });
+};
+
+test('cards keep the slider spacing even when they all start below the screen', () => {
+  assert.deepEqual(positions(25, 12, 3), [12, 15, 18]);
+  assert.deepEqual(positions(50, 12, 2), [12, 13]);
+  assert.deepEqual(positions(75, 9, 6), [9, 9, 9, 10, 10, 10]); // never one big block
+});
+
+test('requests stay near the screen at every share', () => {
+  const limit = 2000;
+  const ask = over => mayRequest({ percent: 25, anchorTop: 500, lastSmallTop: null, hasShownBelow: true, limit, ...over });
+  assert.equal(ask({}), true);
+  assert.equal(ask({ anchorTop: 3000 }), false);
+  assert.equal(ask({ anchorTop: null }), true);
+  // Above 50% the anchor barely moves, so the last small card decides.
+  assert.equal(ask({ percent: 90, anchorTop: 100, lastSmallTop: 3000 }), false);
+  assert.equal(ask({ percent: 90, anchorTop: 100, lastSmallTop: 500 }), true);
+  assert.equal(ask({ percent: 90, anchorTop: 100, lastSmallTop: null }), true);
+  assert.equal(ask({ percent: 75, anchorTop: 100, lastSmallTop: 3000 }), false);
+  // At 100% a request is pointless with no YouTube card left below the screen to replace.
+  assert.equal(ask({ percent: 100, hasShownBelow: false }), false);
+  assert.equal(ask({ percent: 100, lastSmallTop: 500 }), true);
+  assert.equal(ask({ percent: 100, lastSmallTop: 3000 }), false);
+});
+
+test('a rendered card is kept only if nothing changed while it rendered', () => {
+  const ok = { current: true, on: true, paused: false, replacing: false, replacedBelow: false };
+  assert.equal(cardStillWanted(ok), true);
+  assert.equal(cardStillWanted({ ...ok, current: false }), false);
+  assert.equal(cardStillWanted({ ...ok, on: false }), false);
+  assert.equal(cardStillWanted({ ...ok, paused: true }), true); // an added card hides nothing
+  assert.equal(cardStillWanted({ ...ok, replacing: true, replacedBelow: true }), true);
+  assert.equal(cardStillWanted({ ...ok, replacing: true, replacedBelow: true, paused: true }), false);
+  assert.equal(cardStillWanted({ ...ok, replacing: true, replacedBelow: false }), false); // would swap in view
 });
 
 test('rows stay complete before full-width sections', () => {
@@ -48,12 +91,4 @@ test('a late answer from an old page is rejected', () => {
   g.bump();
   assert.equal(g.isCurrent(asked), false);
   assert.equal(g.isCurrent(g.current()), true);
-});
-
-test('cards arriving during a scroll keep the slider spacing', () => {
-  assert.equal(nextPosition(0, 25, 12, null), 12);
-  assert.equal(nextPosition(1, 25, 12, 12), 15);
-  assert.equal(nextPosition(2, 25, 12, 15), 18);
-  assert.equal(nextPosition(1, 50, 12, 12), 13);
-  assert.equal(nextPosition(1, 75, 12, 12), 12); // several small cards per YouTube card is normal here
 });

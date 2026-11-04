@@ -68,10 +68,21 @@ const checkWatchColumn = async (page, setup) => {
   return 'ok';
 };
 
+// Records when the page asks for a card, so a test can act while that request is really in flight.
+const trackRequests = async page => {
+  await page.addInitScript(() => {
+    window.__smallYtAsked = 0;
+    window.addEventListener('message', e => {
+      if (e.data?.ns === 'small-yt' && e.data.type === 'needCard') window.__smallYtAsked++;
+    });
+  });
+};
+const waitForRequest = (page, timeout = 30000) => page.waitForFunction(() => window.__smallYtAsked > 0, null, { timeout });
+
 const checkLateCardsDropped = async page => {
   await page.goto(WATCH_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForSelector('ytd-watch-next-secondary-results-renderer yt-lockup-view-model a[href*="/watch"]', { timeout: 30000 });
-  await page.waitForTimeout(1500); // cards are now being looked up for this video
+  await waitForRequest(page);
   await page.locator('ytd-watch-next-secondary-results-renderer yt-lockup-view-model a[href*="/watch"]').first().click({ timeout: 15000 });
   await page.waitForTimeout(12000);
   const stale = await page.evaluate(() => {
@@ -89,6 +100,38 @@ const checkEmptyHome = async page => {
     small: document.querySelectorAll(s).length,
   }), SMALL);
   if (items === 0) assert.equal(small, 0, 'nothing added to an empty home feed');
+};
+
+const worker = async ctx => ctx.serviceWorkers()[0] ?? ctx.waitForEvent('serviceworker', { timeout: 15000 });
+const setStored = async (ctx, patch) => (await worker(ctx)).evaluate(p => chrome.storage.local.set(p), patch);
+
+const checkHomeSelector = async page => {
+  await page.goto('https://www.youtube.com/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.waitForSelector('ytd-browse[page-subtype="home"] ytd-rich-grid-renderer', { timeout: 30000 });
+  const selector = await page.evaluate(() => window.SmallYT.ytPage.SELECTORS.homeGrid);
+  assert.ok(selector.includes('page-subtype="home"'), 'never picks a hidden page kept from earlier navigation');
+  assert.ok((await page.locator(selector).count()) >= 1, 'the selector finds the home grid');
+};
+
+const checkOffStopsCardsInFlight = async (ctx, page) => {
+  await page.goto(WATCH_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await waitForRequest(page);
+  await setStored(ctx, { settings: { enabled: false } });
+  await page.waitForTimeout(12000);
+  assert.equal(await page.locator(SMALL).count(), 0, 'no card appears after OFF');
+  await (await worker(ctx)).evaluate(() => chrome.storage.local.remove('settings'));
+};
+
+const checkReloadStopsCleanly = async (ctx, page, setup, errors) => {
+  await page.goto(WATCH_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  if (!(await waitForCards(page, setup.expectCards))) return;
+  (await worker(ctx)).evaluate(() => chrome.runtime.reload()).catch(() => {});
+  await page.waitForTimeout(8000);
+  assert.equal(await page.locator(SMALL).count(), 0, 'an orphaned page removes its cards and stops');
+  const asked = await page.evaluate(() => window.__smallYtAsked);
+  await page.waitForTimeout(6000);
+  assert.equal(await page.evaluate(() => window.__smallYtAsked), asked, 'an orphaned page asks for nothing more');
+  assert.deepEqual(errors, [], 'stops quietly');
 };
 
 const extensionId = async ctx => {
@@ -212,6 +255,7 @@ for (const setup of chosen) {
   const browser = await launch(setup);
   const errors = watchExtensionErrors(browser.page);
   try {
+    await trackRequests(browser.page);
     await checkWelcome(browser.ctx, setup);
     await checkPopup(browser.ctx, setup);
     await checkNoWelcomeOnRestart(setup);
@@ -219,6 +263,9 @@ for (const setup of chosen) {
     if (!process.env.E2E_UI_ONLY) {
       await checkLateCardsDropped(browser.page);
       await checkEmptyHome(browser.page);
+      await checkHomeSelector(browser.page);
+      await checkOffStopsCardsInFlight(browser.ctx, browser.page);
+      await checkReloadStopsCleanly(browser.ctx, browser.page, setup, errors);
     }
     assert.deepEqual(errors, [], 'no extension errors');
     console.log(`PASS ${setup.name}: watch column ${watch}`);

@@ -4,6 +4,7 @@
   const PAUSE_MS = 30 * 60 * 1000;
   const DAILY_BUDGET = 3000;
   const SERVER_ERRORS_TO_PAUSE = 3;
+  const REDIRECTS_TO_PAUSE = 5;
   const HIDDEN_TAB_POLL_MS = 500;
   const CAPTCHA_PAGE_MAX_LENGTH = 100000; // real YouTube pages are far larger than a captcha page
 
@@ -25,6 +26,7 @@
     let pausedUntil = 0;
     let budgetOutDay = null;
     let serverErrors = 0;
+    let redirects = 0;
     let lastHalted = false;
 
     const today = () => new Date(now()).toISOString().slice(0, 10);
@@ -94,6 +96,18 @@
         } catch {
           response = { status: 0 };
         }
+        // A consent page redirects like this, and so may a captcha. It can't be told which, so a
+        // few count as an unreadable page, but every page redirecting means it's time to stop.
+        if (response.redirected) {
+          redirects++;
+          if (redirects >= REDIRECTS_TO_PAUSE) {
+            redirects = 0;
+            await pauseNow();
+            throw fail('paused');
+          }
+          return response;
+        }
+        redirects = 0;
         const verdict = classifyResponse(response);
         if (verdict === 'pause') {
           await pauseNow();

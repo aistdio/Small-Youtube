@@ -79,3 +79,25 @@ test('an unreadable response gives an empty result', async () => {
   assert.equal(await api.subscribers('UC1'), null);
   assert.equal(await api.watchInfo('v'), null);
 });
+
+test('page fetches never follow a redirect to another site', async () => {
+  const calls = [];
+  const queue = { run: async (kind, fn) => fn() };
+  const fetchFn = async (url, init) => {
+    calls.push(init);
+    return { status: 0, type: 'opaqueredirect', url: '', text: async () => '' };
+  };
+  const api = createApi({ queue, fetchFn, context: { clientVersion: '1', hl: 'en', gl: 'US' } });
+  assert.equal(await api.watchInfo('v'), null);
+  assert.deepEqual(await api.search('x', true), []);
+  assert.ok(calls.every(c => c.redirect === 'manual'));
+});
+
+test('a redirect is reported to the queue', async () => {
+  let seen = null;
+  const queue = { run: async (kind, fn) => { seen = await fn(); return seen; } };
+  const fetchFn = async () => ({ status: 0, type: 'opaqueredirect', url: '', text: async () => '' });
+  const api = createApi({ queue, fetchFn, context: { clientVersion: '1', hl: 'en', gl: 'US' } });
+  await api.watchInfo('v');
+  assert.equal(seen.redirected, true);
+});
