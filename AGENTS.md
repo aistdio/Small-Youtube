@@ -83,6 +83,14 @@ Cards vanish or requests fail? In order:
 
 The audio track suffixes (`.4` original, `.10` auto-dub), the auto-dub icon, the AI label's shape and the menu and card data shapes are undocumented YouTube behaviour, seen in testing. Expect them to change eventually. If the AI setting stops working, nothing visibly breaks, so check it with a labelled video.
 
+## TODO
+
+Remind the user of these at the start of each session, until they're done. Then remove them.
+
+- **Raise the ceiling on added videos.** Added cards top out at about 56% of the feed, because requests aren't optimized enough to find more. Ideas:
+  - Speed up account page fetches from 1 per 2 seconds to 1 per second (`account: lane(2000, 1)` in `src/content/queue.js`), perhaps with a slider like the others. This changes a limit in "Rules that must hold", and a block could land on the user's account. The popup is nearly full, so a slider may not fit.
+  - Keep videos that were found but never shown because the user didn't scroll far enough, and use them for later cards. They were found for older seeds, so check that they still suit the feed. `src/content/pipeline.js` already keeps some candidates per seed in `pools`.
+
 ## Known minor issues
 
 These were found in review and left for later:
