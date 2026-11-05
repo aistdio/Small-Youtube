@@ -8,15 +8,15 @@ A Manifest V3 browser extension that adds videos from small channels next to You
 - Never read or compute anything from login cookies, and never use `document.cookie`. Only let the browser send them.
 - Search, related list, channel lookups and tags use `credentials: 'omit'`, because cookie searches write to the user's YouTube history. Page fetches (`/watch`, `/results`) are the only logged-in requests.
 - No-cookie requests: at most 3 per second, 3 at once. Account page fetches: at most 1 per 2 seconds, 1 at a time. About 3,000 requests a day per browser, shared across tabs. Only the visible tab fetches.
-- On 403, 429, repeated server errors or any captcha sign: stop everything for 30 minutes without retrying. On 404: skip that item. Never try to get past a captcha.
+- On 403, 429, repeated server errors or any captcha sign: stop everything for 30 minutes without retrying. On 404: skip that item. Page fetches don't follow redirects, and five redirects in a row also pause. Never try to get past a captcha.
 - Cards are rendered by YouTube itself. Never set a card's size, and never change autoplay.
 - Never open tabs, except the one welcome tab on install. Never press the confirm button in YouTube's language dialog.
 - A failed card is removed, never left broken. If YouTube sends something unexpected, the feed stays as it is.
-- User-facing strings live in `extension/_locales/`. Settings are one line each.
+- User-facing strings live in `extension/_locales/`. Settings are one line each, and named after what the extension adds, because they don't affect YouTube's own recommendations.
 
 ## Layout
 
-Everything the browser loads is in `extension/`.
+Everything the browser loads is in `extension/`. `scripts/build-firefox.mjs` copies it to `dist/firefox` with Firefox's manifest differences, because Chrome reports them as errors.
 
 | Path | World | Job |
 |---|---|---|
@@ -30,7 +30,7 @@ Everything the browser loads is in `extension/`.
 
 The two worlds talk through `window.postMessage` with `ns: 'small-yt'`. Requests must run from the content script, because the service worker gets 403 on API search. Rendering must run in the page world, because only there can `.data` be set on YouTube's elements.
 
-No build step. Each source file is a classic script that adds itself to `globalThis.SmallYT`, so tests can load it with a plain import:
+No build step for Chromium browsers. Each source file is a classic script that adds itself to `globalThis.SmallYT`, so tests can load it with a plain import:
 
 ```js
 (() => { const api = { /* ... */ }; (globalThis.SmallYT ??= {}).name = api; })();
@@ -63,8 +63,10 @@ npm run lint
 ```
 
 - `npm test`: unit tests on saved YouTube responses in `tests/fixtures/`. Run these after every change.
+- `npm run lint`: builds the Firefox copy and lints it. Expect one warning about the minimum Firefox version.
 - `npm run e2e`: the real extension in throwaway logged-out browsers, across languages and window sizes, plus Edge when installed. It uses real YouTube, so don't run it in a loop. Set `E2E_ONLY=chromium-en` for one setup, and `E2E_UI_ONLY=1` to skip YouTube.
 - Logged-out home feeds are empty, so home-feed behaviour can only be checked in a logged-in browser. Load `extension/` with "Load unpacked" at `chrome://extensions`.
+- Browser automation tools can make every tab report itself as visible, so background-tab behaviour can't be checked that way. A unit test covers it.
 - To reload an unpacked copy from YouTube's page console: `window.postMessage({ ns: 'small-yt', from: 'page', type: 'devReload' }, location.origin)`. Then reload the tab.
 
 ## When YouTube changes something
@@ -75,4 +77,19 @@ Cards vanish or requests fail? In order:
 2. Fix `src/youtube.js` for data, or `src/youtube-page.js` for selectors.
 3. Run `npm run e2e`, then check the home feed in a logged-in browser.
 
-The audio track suffixes (`.4` original, `.10` auto-dub) and the menu and card data shapes are undocumented YouTube behaviour, seen in testing. Expect them to change eventually.
+The audio track suffixes (`.4` original, `.10` auto-dub), the auto-dub icon, the AI label's shape and the menu and card data shapes are undocumented YouTube behaviour, seen in testing. Expect them to change eventually. If the AI setting stops working, nothing visibly breaks, so check it with a labelled video.
+
+## Known minor issues
+
+These were found in review and left for later:
+
+- A card counter can drift after a restart. Dropped cards stay in the shown list, and stale requests aren't cancelled.
+- The captcha check matches `g-recaptcha` in any short response, including JSON.
+- An unreadable channel reply is cached as a hidden subscriber count for 7 days.
+- Share changes apply at the next page load, so going from 100 to 25 leaves cards hidden until then.
+- Keyboard users' ⋮ actions use the last card pressed with a pointer, so they could hide the wrong channel.
+- Search-built cards show "6.8K" where some neighbours show "6.8K views".
+- Page scripts can post bridge messages (languages, blocks, budget, reloading an unpacked copy). They gain no privileges, but payloads aren't validated.
+- The dev reload may be live in signed Firefox builds, which may have no `update_url`.
+- Shared counters can lose updates, and two visible windows double the request rate.
+- One startup check polls forever if `ytcfg` never appears, and the candidate pools may hold tens of MB.

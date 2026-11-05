@@ -42,7 +42,7 @@ For each small card to add:
 4. **Cheap filters:** view range, at least 60 seconds, not a Short, mix, live stream or premiere, not the seed's channel, not a near-copy of the seed's title, no hidden channel or muted topic, not already shown. To save lookups, also skip videos over 300k views, even when the views range has no upper limit. Drop this cutoff when the chosen minimum is 300k or more.
 5. **Subscriber filter:** go through the remaining candidates, on-topic ones first, and look up at most 8 channels per card. Keep those in the subscriber range, and drop channels that hide their count. Cache counts for 7 days, and cached channels don't count toward the 8.
 6. **Rank:** on-topic videos (seed keywords in the title) go before off-topic ones. Inside each group, sort by views per subscriber, counting 0 subscribers as 1. Take the first 3, or fewer if fewer qualify, and pick one at random so results vary. Never pick "least views".
-7. **Language check** on the chosen video only (rules below). If it fails, take the next candidate in the ranking.
+7. **Language check** on the chosen video only (rules below). If it fails, take the next candidate in the ranking, up to 4 checks per card.
 8. **Insert** the card in the next open position below what the viewer is looking at, with a quiet fade-in. Positions come from the slider ratio, not from the seed, so spacing stays even. A card usually lands near its seed, but that isn't guaranteed. Slow cards simply take a later position. If nothing qualifies, add nothing.
 
 The home feed needs seeds. On an empty home feed, such as a logged-out browser with no history, add nothing there. The watch page still works.
@@ -141,6 +141,7 @@ Cards are rendered by YouTube itself, not imitated, so they match its look in an
   - **Less of this topic:** mute one best phrase from the seed, such as "Epic Seven", matched whole in titles. Matching videos are no longer picked, and matching YouTube cards stop being seeds. The phrase appears in the hidden list, so a bad guess is easy to undo. If there's no clear phrase, stop using that seed's channel as a source instead.
 - This is stored locally. YouTube isn't told, so its own recommendations don't change.
 - **Rows:** adding a card can leave a gap before a full-width section such as the Shorts row. Keep rows complete using `--ytd-rich-grid-items-per-row`.
+- **Reused elements:** when a filter chip changes the feed, YouTube reuses card elements for its own videos, including ones this extension added. If a small card shows a different video than the one remembered for it, those elements lose the mark and stay, other small cards go, and the fill restarts.
 - **Safety:** after rendering, compare the card with a visible neighbour, or at 100% with a width recorded before hiding YouTube's cards. If the title is missing or the width differs, remove it. A missing card is fine, a broken one isn't. Don't compare height strictly, because longer titles make stacked cards taller.
 
 Known difference: no-cookie data gives a shorter menu (Add to queue, Download, Share) without YouTube's Watch later or Not interested. Removing this difference isn't required for the first version.
@@ -159,8 +160,9 @@ YouTube publishes no limits for these requests, so these are conservative.
 - Fetch only for cards near the screen, and only in the visible tab, so several open tabs don't multiply the rate. Keep the request counters and the pause flag in `chrome.storage`, so all tabs share them.
 - On a 403, 429, repeated server errors or any captcha sign: stop everything for 30 minutes without retrying. All YouTube cards stay visible during the pause.
 - On a 404, skip that video or channel and carry on.
+- Page fetches don't follow redirects. A redirected page counts as unreadable, so its language is unknown. Five in a row pause for 30 minutes, because a captcha redirect looks the same as a consent page.
 
-A default feed page takes at most about 120 requests and 5 MB before caching (estimate), and about 40 seconds to fill. That's fine, because cards appear quietly and nothing waits on them.
+Measured in a logged-in Chrome: about 15 requests per card (650 requests for 43 cards), and 2–5 cards in the first 25 seconds on home. At that rate the daily budget covers about 200 cards. Slow filling is fine, because cards appear quietly and nothing waits on them.
 
 ## Measured so far
 
@@ -231,14 +233,14 @@ Quality signal so far: of 5 picks reviewed by hand, 4 passed on quality, and 1 f
 - Getting the short view count from search results in every language. Removing the last word worked for English and Russian, but won't work everywhere.
 - The combined ranking and the keywords-plus-tags method, which haven't been tested end to end.
 - Behavior over hours of daily use or on shared connections such as VPNs.
-- Firefox, Opera and Safari, ad blockers and other YouTube extensions, YouTube Premium or restricted accounts, and the consent page shown in some regions, which could block no-cookie page fetches.
+- Firefox, Opera and Safari, ad blockers and other YouTube extensions, YouTube Premium or restricted accounts, and the consent page shown in some regions, which would leave languages unknown and so show no cards.
 - How the native cards survive YouTube layout experiments. Other users may see different card types than the ones tested.
 - The `.4` and `.10` track pattern is undocumented and seen on a small sample. Keep it in one place.
 - Whether account page fetches influence recommendations. They didn't appear in watch history.
 
 ## Browsers
 
-One Manifest V3 codebase in plain JavaScript with no framework. Chrome, Edge, Brave, Opera and Vivaldi should run it unchanged. Firefox needs small manifest differences; check them with `web-ext lint`. Safari is out of scope. Tested so far: the real extension in Chromium and Edge, and page scripts in Chrome. The README marks the others "untested, should work".
+One Manifest V3 codebase in plain JavaScript with no framework. Chrome, Edge, Brave, Opera and Vivaldi should run `extension/` unchanged. Firefox needs background scripts instead of a service worker, and Chrome reports the Firefox form as an error, so `npm run build:firefox` makes a copy in `dist/firefox`, and `npm run lint` checks that copy. Safari is out of scope. Tested so far: the real extension logged in on Chrome, and logged out on Chromium and Edge. The README marks the others "untested, should work".
 
 ## Repository and docs
 
@@ -254,6 +256,14 @@ One Manifest V3 codebase in plain JavaScript with no framework. Chrome, Edge, Br
 - Unit tests for parsers and selection logic, using saved YouTube responses.
 - Automated real-extension runs in separate logged-out test browsers across locales and window sizes.
 - Logged-in checks in Chrome through the Claude in Chrome connection. The tester loads the unpacked extension once.
+
+## Decisions made during the build
+
+- YouTube-specific code is in two files, because Chrome injects a file listed in two `content_scripts` entries only once.
+- The share box accepts any whole percent, because every slider's box should be editable.
+- "No limit" shows as `∞` with a tooltip, because the words didn't fit in Russian.
+- At most 4 language checks per card, and a checked video isn't checked again, so one card can't spend many 2-second fetches.
+- `feed.js` has no fake-page tests, because a fake page can't reproduce YouTube's components. Its logic moved into tested functions in `slots.js`, and the rest is covered by real-browser runs.
 
 ## Designer's calls, not yet confirmed
 

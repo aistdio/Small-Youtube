@@ -1,5 +1,7 @@
 # Small-Youtube Implementation Plan
 
+> **This plan is a historical record of how the first version was built, and the build differs from it in places:** for example, YouTube code is in two files, not one. The current design is in the spec, and `AGENTS.md` describes the code as it is.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A Manifest V3 extension that adds small-channel videos, rendered by YouTube itself, to the home feed and the watch-page column.
