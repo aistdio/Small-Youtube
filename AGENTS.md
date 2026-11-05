@@ -77,7 +77,7 @@ npm run lint
 
 Cards vanish or requests fail? In order:
 
-1. Run `npm run fixtures`, then `npm test`. Failing parser tests show which response shape changed.
+1. Run `npm run fixtures`, then `npm test`. Failing parser tests show which response shape changed. Read the saved video titles before committing, because related lists follow the viewer's region and can include sensitive topics.
 2. Fix `src/youtube.js` for data, or `src/youtube-page.js` for selectors.
 3. Run `npm run e2e`, then check the home feed in a logged-in browser.
 
