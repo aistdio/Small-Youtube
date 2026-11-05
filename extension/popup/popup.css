@@ -41,12 +41,12 @@ body {
 
 main {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   padding: 10px 16px;
 }
 
 h1, h2 {
-  margin: 0 0 6px;
+  margin: 0 0 2px;
   font-size: inherit;
   font-weight: 600;
 }
@@ -62,7 +62,7 @@ h1 { font-size: 15px; }
 }
 
 .tile {
-  aspect-ratio: 2 / 1;
+  aspect-ratio: 5 / 2;
   border-radius: 3px;
   background: var(--tile);
   transition: background-color 180ms ease;
@@ -138,7 +138,7 @@ h1 { font-size: 15px; }
 .value {
   flex: none;
   width: 58px;
-  padding: 3px 4px;
+  padding: 2px 4px;
   border: 1px solid var(--line);
   border-radius: 4px;
   background: none;
@@ -166,7 +166,7 @@ h1 { font-size: 15px; }
 .settings {
   display: grid;
   gap: 4px;
-  padding-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid var(--line);
 }
 

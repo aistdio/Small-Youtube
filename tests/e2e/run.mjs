@@ -35,6 +35,31 @@ const waitForCards = async (page, required) => {
   }
 };
 
+// YouTube loading its next page of cards must not cost us ours, and must not stop it loading.
+const SIDE_COLUMN_MIN_WIDTH = 1000; // narrower, the column sits under the video and may not load more, even with no extension
+const checkCardsSurviveLoadingMore = async (page, setup) => {
+  const state = () => page.evaluate(s => {
+    const column = document.querySelector('ytd-watch-next-secondary-results-renderer');
+    const shown = [...column.querySelectorAll(s)].map(el => el.querySelector('a[href*="/watch"]')?.getAttribute('href'));
+    return {
+      shown,
+      youTubeCards: column.querySelectorAll('yt-lockup-view-model:not([data-small-yt])').length,
+      reset: document.documentElement.getAttribute('data-small-yt-page'),
+    };
+  }, SMALL);
+  const before = await state();
+  for (let i = 0; i < 12; i++) {
+    await page.evaluate(() => scrollBy(0, innerHeight));
+    await page.waitForTimeout(1000);
+    if ((await state()).youTubeCards > before.youTubeCards + 5) break;
+  }
+  const after = await state();
+  if (setup.viewport.width >= SIDE_COLUMN_MIN_WIDTH) assert.ok(after.youTubeCards > before.youTubeCards + 5, 'YouTube keeps loading more cards');
+  assert.equal(after.reset, before.reset, 'loading more does not reset the cards');
+  for (const card of before.shown) assert.ok(after.shown.includes(card), 'each added card stays and keeps its video');
+  await page.evaluate(() => scrollTo(0, 0));
+};
+
 const checkWatchColumn = async (page, setup) => {
   await page.goto(WATCH_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForSelector('ytd-watch-next-secondary-results-renderer yt-lockup-view-model', { timeout: 30000 });
@@ -44,10 +69,14 @@ const checkWatchColumn = async (page, setup) => {
   await page.waitForTimeout(1500);
   const report = await page.evaluate(s => {
     const card = document.querySelector(s);
-    const neighbour = [...card.parentElement.children].find(el => el.tagName === card.tagName && !el.hasAttribute('data-small-yt'));
+    const neighbour = card.parentElement.closest('yt-lockup-view-model'); // the card it's nested in
     return {
       cardWidth: Math.round(card.getBoundingClientRect().width),
       neighbourWidth: Math.round(neighbour.getBoundingClientRect().width),
+      cardHeight: Math.round(card.getBoundingClientRect().height),
+      neighbourHeight: Math.round(neighbour.firstElementChild.getBoundingClientRect().height),
+      cardGap: Math.round(card.getBoundingClientRect().top - neighbour.firstElementChild.getBoundingClientRect().bottom),
+      neighbourMargin: parseInt(getComputedStyle(neighbour).marginTop, 10),
       youTubeCards: document.querySelectorAll('ytd-watch-next-secondary-results-renderer yt-lockup-view-model:not([data-small-yt])').length,
       title: card.querySelector('h3')?.textContent?.trim(),
       opacity: getComputedStyle(card).opacity,
@@ -56,9 +85,13 @@ const checkWatchColumn = async (page, setup) => {
   }, SMALL);
   assert.match(report.text, /Small Creator/, 'the label shows on the card');
   assert.equal(report.cardWidth, report.neighbourWidth, 'same width as neighbour');
+  // Heights differ a little with title length, but a card missing its layout values is more than twice as tall.
+  assert.ok(Math.abs(report.cardHeight - report.neighbourHeight) <= report.neighbourHeight * 0.2, `about the same height as neighbour: ${report.cardHeight} vs ${report.neighbourHeight}`);
+  assert.equal(report.cardGap, report.neighbourMargin, 'same gap as between real cards');
   assert.ok(report.youTubeCards >= before, 'YouTube cards stay');
   assert.ok(report.title, 'card has a title');
   assert.equal(report.opacity, '1', 'card faded in');
+  await checkCardsSurviveLoadingMore(page, setup);
 
   await page.evaluate(() => { window.__smallYtMarker = 'same-page'; });
   const link = page.locator(`${SMALL} a[href*="/watch"]`).first();
@@ -191,6 +224,26 @@ const checkPopup = async (ctx, setup) => {
   await popup.locator('#share-slider').focus();
   await popup.keyboard.press('ArrowRight');
   assert.equal((await stored()).share, 50, 'arrow keys move to the next stop');
+
+  assert.equal(await value('#requests-value'), '3k', 'the daily limit starts at 3k');
+  assert.equal(await popup.evaluate(() => document.getElementById('views-min').closest('section').nextElementSibling.contains(document.getElementById('requests-slider'))), true, 'it comes right after the views range');
+  await popup.locator('#requests-slider').focus();
+  await popup.keyboard.press('ArrowRight');
+  assert.equal((await stored()).dailyRequests, 5000, 'arrow keys move to the next stop');
+  await popup.keyboard.press('ArrowRight');
+  await popup.keyboard.press('ArrowRight');
+  assert.equal((await stored()).dailyRequests, null, 'the last stop has no limit');
+  assert.equal(await value('#requests-value'), '∞');
+  for (const rejected of ['0', 'abc']) {
+    await popup.locator('#requests-value').fill(rejected);
+    await popup.locator('#requests-value').blur();
+    assert.equal((await stored()).dailyRequests, null, `${rejected} is not a limit`);
+    assert.equal(await value('#requests-value'), '∞', 'the box goes back to the saved value');
+  }
+  await popup.locator('#requests-value').fill('2k');
+  await popup.locator('#requests-value').blur();
+  assert.equal((await stored()).dailyRequests, 2000, 'a typed limit can sit between stops');
+  assert.equal(await value('#requests-value'), '2k');
 
   await popup.locator('#add-language').selectOption('fi');
   assert.ok((await stored()).languages.includes('fi'));

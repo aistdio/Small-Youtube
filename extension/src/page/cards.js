@@ -12,21 +12,20 @@
     && width > 0
     && Math.abs(width - referenceWidth) <= WIDTH_TOLERANCE_PX;
 
-  // Setting `data` alone renders a tall card here: it also needs the neighbour's layout properties.
+  // Setting `data` alone renders a tall card here: it also needs the neighbour's layout values.
+  // These are read out one by one. Sharing the neighbour's internals makes the card snap back to its video.
   const createWatchCard = (lockup, neighbour) => {
     const el = document.createElement(S.lockup);
     el.className = neighbour.className;
-    for (const key of Object.keys(neighbour)) {
-      if (key === 'data' || key.startsWith('__')) continue;
-      try {
-        el[key] = neighbour[key];
-      } catch {
-        // Read-only property.
-      }
+    for (const [key, read] of Object.entries(neighbour.rawProps ?? {})) {
+      if (key !== 'data' && key !== 'className' && typeof read === 'function') el[key] = read();
     }
     el.data = lockup;
     return el;
   };
+
+  // For a card nested inside another. YouTube clears the style when the card connects, so this comes after it settles.
+  const matchGap = (el, host) => { el.style.marginTop = getComputedStyle(host).marginTop; };
 
   const createHomeCard = (lockup, neighbour) => {
     const el = document.createElement(S.homeItem);
@@ -116,7 +115,7 @@
   };
 
   (globalThis.SmallYT ??= {}).cards = {
-    verifyRendered, createWatchCard, createHomeCard, measure, settle, prepareFade, fadeIn, remember, recall, isRecycled, installMenu,
+    verifyRendered, createWatchCard, matchGap, createHomeCard, measure, settle, prepareFade, fadeIn, remember, recall, isRecycled, installMenu,
     clickedCard, installWatchTracker,
   };
 })();

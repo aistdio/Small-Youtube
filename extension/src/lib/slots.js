@@ -35,6 +35,23 @@
 
   const cardsToMove = (segmentCount, perRow) => (perRow > 0 ? segmentCount % perRow : 0);
 
+  // How many cards one seed may supply. Some seeds find nothing, so this allows about twice what the share needs.
+  const seedUseLimit = percent => {
+    const perYouTubeCard = percent >= 100 ? 1 : percent / (100 - percent);
+    return Math.ceil(perYouTubeCard * 2) + 1;
+  };
+
+  // A seed used once already has its results, so its next card costs far fewer requests. That matters more
+  // than sitting close to it, because while the viewer scrolls, the seeds near the next position keep changing.
+  const seedChoices = (seeds, position, radius, usesOf) => {
+    const usedOnce = seeds.filter(({ seed }) => usesOf(seed) === 1);
+    if (usedOnce.length) return usedOnce;
+    const near = seeds.filter(({ index }) => Math.abs(index - position) <= radius);
+    const from = near.length ? near : seeds;
+    const least = Math.min(...from.map(({ seed }) => usesOf(seed)));
+    return from.filter(({ seed }) => usesOf(seed) === least);
+  };
+
   const createGeneration = () => {
     let value = 0;
     return {
@@ -46,5 +63,6 @@
 
   (globalThis.SmallYT ??= {}).slots = {
     resolveShare, smallCardsOwed, targetAfter, placeAfter, mayRequest, cardStillWanted, cardsToMove, createGeneration,
+    seedUseLimit, seedChoices,
   };
 })();

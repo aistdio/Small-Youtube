@@ -40,21 +40,28 @@
     };
     const setSettings = async patch => set('settings', normalize({ ...(await get('settings')), ...patch }));
 
+    // These saves read a whole list and write it back, so at the same time they'd lose each other's changes.
+    let saves = Promise.resolve();
+    const inTurn = save => {
+      saves = saves.then(save, save);
+      return saves;
+    };
+
     const getSubs = async channelId => {
       const entry = (await get('channels'))?.[channelId];
       return entry && now() - entry.at <= CHANNEL_CACHE_MS ? entry.subs : undefined;
     };
-    const setSubs = async (channelId, subs) => {
+    const setSubs = (channelId, subs) => inTurn(async () => {
       const kept = {};
       for (const [id, entry] of Object.entries((await get('channels')) ?? {})) {
         if (now() - entry.at <= CHANNEL_CACHE_MS) kept[id] = entry;
       }
       kept[channelId] = { subs, at: now() };
       await set('channels', kept);
-    };
+    });
 
     const getShown = async () => new Set((await get('shown')) ?? []);
-    const addShown = async id => set('shown', [...((await get('shown')) ?? []), id].slice(-SHOWN_LIMIT));
+    const addShown = id => inTurn(async () => set('shown', [...((await get('shown')) ?? []), id].slice(-SHOWN_LIMIT)));
 
     const getBlocks = async () => ({ ...NO_BLOCKS, ...(await get('blocks')) });
     const updateBlocks = async change => {

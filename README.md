@@ -16,12 +16,13 @@ For Firefox, run `npm install` and `npm run build:firefox`, then load `dist/fire
 Click the extension's icon.
 
 - **Small channels in your feed:** how much of your feed is small channels. The default is 25%.
-- **What counts as small:** the range of subscribers (default 10 to 10k) and video views (default no limit). Drag the handles, or type a value into the box.
+- **Channel subscribers and video views:** what counts as small. The defaults are 10 to 10k subscribers and any number of views. Drag the handles, or type a value into the box.
+- **Daily request limit:** how many requests the extension may make in a day. The default is 3k. A higher limit keeps cards coming for longer, but not faster.
 - **Show "Small Creator" on added videos:** on by default. Added videos show this text after the date, so you can tell them from YouTube's own. It applies to new cards, so reload the page to see a change.
 - **Don't add auto-dubbed videos:** on by default. The extension won't add videos YouTube would play with a robotic translation.
 - **Add videos labelled as AI:** on by default. Turn it off and the extension won't add videos that carry YouTube's AI label. YouTube's own recommendations aren't affected.
 - **My languages:** taken from your YouTube account once, or English plus your browser's language when you're logged out. The extension won't add videos in other languages.
-- **Add videos in unknown languages:** off by default.
+- **Add videos with no detected speech:** on by default. These are mostly clips, animations and background noise, with no spoken language to check. Once in a while one may have speech that YouTube didn't caption.
 - **Use my account for searches:** off by default. Picks may suit your taste better, but these searches appear in your YouTube history.
 - **Added videos watched:** how many added videos you've opened, and which. It's saved only in your browser, and **Clear** empties it.
 - **Don't add videos with these words:** type a word and press Enter. A video is skipped when its title contains that exact word, in any case, so "cat" won't catch "cats". Add each form you want to skip.

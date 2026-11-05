@@ -34,6 +34,18 @@ test('channel cache expires after 7 days', async () => {
   assert.equal(await store.getSubs('UC1'), undefined);
 });
 
+test('channels saved at the same time are all kept', async () => {
+  const { store } = make();
+  await Promise.all([store.setSubs('UC1', 1), store.setSubs('UC2', 2), store.setSubs('UC3', 3)]);
+  assert.deepEqual([await store.getSubs('UC1'), await store.getSubs('UC2'), await store.getSubs('UC3')], [1, 2, 3]);
+});
+
+test('videos marked as shown at the same time are all kept', async () => {
+  const { store } = make();
+  await Promise.all([store.addShown('a'), store.addShown('b'), store.addShown('c')]);
+  assert.deepEqual([...await store.getShown()].sort(), ['a', 'b', 'c']);
+});
+
 test('a hidden subscriber count is remembered as null', async () => {
   const { store } = make();
   await store.setSubs('UC2', null);

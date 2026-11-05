@@ -13,6 +13,35 @@ test('safety check', () => {
   assert.ok(!verifyRendered({ hasTitle: true, width: 0, referenceWidth: 0 })); // not rendered at all
 });
 
+test('a watch card takes its neighbour\'s layout values but none of its internal state', t => {
+  const { createWatchCard } = globalThis.SmallYT.cards;
+  globalThis.document = { createElement: () => ({}) };
+  t.after(() => { delete globalThis.document; });
+  const neighbour = {
+    className: 'lockup',
+    rawProps: { sizing: () => 'COMPACT', componentGap: () => 8, className: () => 'not-this', class: 'plain', data: () => ({ contentId: 'neighbour' }) },
+    setters: { data: () => {} },
+    owner: {},
+    _signalValues: [],
+  };
+  const lockup = { contentId: 'mine' };
+  const el = createWatchCard(lockup, neighbour);
+  assert.equal(el.className, 'lockup');
+  assert.equal(el.sizing, 'COMPACT');
+  assert.equal(el.componentGap, 8);
+  assert.equal(el.data, lockup);
+  for (const internal of ['setters', 'owner', '_signalValues', 'rawProps', 'class']) assert.equal(el[internal], undefined, internal);
+});
+
+test('a nested card gets the same gap as the card holding it', t => {
+  const { matchGap } = globalThis.SmallYT.cards;
+  globalThis.getComputedStyle = () => ({ marginTop: '8px' });
+  t.after(() => { delete globalThis.getComputedStyle; });
+  const card = { style: {} };
+  matchGap(card, {});
+  assert.equal(card.style.marginTop, '8px');
+});
+
 test('a small card whose element YouTube reused for another video counts as recycled', () => {
   const { isRecycled } = globalThis.SmallYT.cards;
   assert.equal(isRecycled('abc', 'xyz'), true);

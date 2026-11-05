@@ -7,7 +7,7 @@ A Manifest V3 browser extension that adds videos from small channels next to You
 - Permissions stay `storage` and `https://www.youtube.com/*`. No server, no analytics, no outside requests.
 - Never read or compute anything from login cookies, and never use `document.cookie`. Only let the browser send them.
 - Search, related list, channel lookups and tags use `credentials: 'omit'`, because cookie searches write to the user's YouTube history. Page fetches (`/watch`, `/results`) are the only logged-in requests.
-- No-cookie requests: at most 3 per second, 3 at once. Account page fetches: at most 1 per 2 seconds, 1 at a time. About 3,000 requests a day per browser, shared across tabs. Only the visible tab fetches.
+- No-cookie requests: at most 3 per second, 3 at once. Account page fetches: at most 1 per 2 seconds, 1 at a time. The daily request limit is the user's setting (3,000 by default, up to no limit), per browser and shared across tabs. Pauses still apply with no limit. Only the visible tab fetches.
 - On 403, 429, repeated server errors or any captcha sign: stop everything for 30 minutes without retrying. On 404: skip that item. Page fetches don't follow redirects, and five redirects in a row also pause. Never try to get past a captcha.
 - Cards are rendered by YouTube itself. Never set a card's size, and never change autoplay.
 - Never open tabs, except the one welcome tab on install and watched-list links the user presses. Never press the confirm button in YouTube's language dialog.
@@ -37,6 +37,8 @@ No build step for Chromium browsers. Each source file is a classic script that a
 ```
 
 **YouTube reuses card elements** when a filter chip changes the feed, including ones the extension added, and keeps earlier pages hidden in the document. So name the page in selectors, and check what a marked card is showing before trusting the mark.
+
+**YouTube goes by position when it loads more cards.** The home grid writes each entry of `data.contents` onto the element at the same position, so each added card needs its own entry (`syncList`). The watch column counts its children to place new cards, and editing its list breaks it, so watch cards are nested inside the card they follow.
 
 **Don't list a file in two `content_scripts` entries.** Chrome injects it only once, in the first entry's world, and the other world silently breaks. A test guards this.
 
@@ -95,3 +97,4 @@ These were found in review and left for later:
 - The dev reload may be live in signed Firefox builds, which may have no `update_url`.
 - Shared counters can lose updates, and two visible windows double the request rate.
 - One startup check polls forever if `ytcfg` never appears, and the candidate pools may hold tens of MB.
+- A watch-column card can show a video that YouTube's own column also shows.

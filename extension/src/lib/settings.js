@@ -12,8 +12,9 @@
     skipDubbed: true,
     showAiVideos: true,
     showSmallCreatorLabel: true,
-    showUnknownLanguage: false,
+    showNoSpeechVideos: true,
     useAccountForSearches: false,
+    dailyRequests: 3000, // null means no limit
     languages: null, // filled on first run, null until then
     languagesEdited: false,
   });
@@ -41,8 +42,9 @@
       skipDubbed: flag(r.skipDubbed, DEFAULTS.skipDubbed),
       showAiVideos: flag(r.showAiVideos, DEFAULTS.showAiVideos),
       showSmallCreatorLabel: flag(r.showSmallCreatorLabel, DEFAULTS.showSmallCreatorLabel),
-      showUnknownLanguage: flag(r.showUnknownLanguage, DEFAULTS.showUnknownLanguage),
+      showNoSpeechVideos: flag(r.showNoSpeechVideos, DEFAULTS.showNoSpeechVideos),
       useAccountForSearches: flag(r.useAccountForSearches, DEFAULTS.useAccountForSearches),
+      dailyRequests: count(r.dailyRequests, DEFAULTS.dailyRequests, true),
       languages: DEFAULTS.languages,
       languagesEdited: flag(r.languagesEdited, DEFAULTS.languagesEdited),
     };

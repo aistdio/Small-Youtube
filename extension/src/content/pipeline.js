@@ -4,6 +4,7 @@
   const { yt, topic, language } = globalThis.SmallYT;
 
   const MAX_LOOKUPS_PER_CARD = 8;
+  const ENOUGH_KNOWN_FITS = 3; // the ranking picks among the top 3
   const MAX_LANGUAGE_CHECKS_PER_CARD = 4;
   const MAX_POOLS = 100;
 
@@ -37,6 +38,7 @@
         terms: topic.topicTerms(seed.title, seed.channelName, tags),
         template: yt.pickTemplate(related),
         candidates: [...byId.values()],
+        usedChannels: new Set(),
       };
     };
 
@@ -50,25 +52,27 @@
       return pools.get(seed.id);
     };
 
+    // Lookups all start at once: the request queue sets their pace, so this only removes waiting.
     const withSubscribers = async (candidates, settings) => {
-      const fits = [];
-      let lookups = 0;
-      for (const candidate of candidates) {
-        let subs = await store.getSubs(candidate.channelId);
-        if (subs === undefined) {
-          if (lookups >= MAX_LOOKUPS_PER_CARD) continue;
-          lookups++;
-          try {
-            subs = await api.subscribers(candidate.channelId);
-          } catch (err) {
-            if (isSkip(err)) continue;
-            throw err;
-          }
-          await store.setSubs(candidate.channelId, subs);
+      const channelIds = [...new Set(candidates.map(c => c.channelId))];
+      const known = await Promise.all(channelIds.map(id => store.getSubs(id)));
+      const subsOf = new Map(channelIds.map((id, i) => [id, known[i]]));
+      const fits = () => candidates
+        .filter(c => topic.inSubscriberRange(subsOf.get(c.channelId), settings))
+        .map(c => ({ ...c, subs: subsOf.get(c.channelId) }));
+      if (fits().length >= ENOUGH_KNOWN_FITS) return fits();
+
+      const unknown = channelIds.filter(id => subsOf.get(id) === undefined).slice(0, MAX_LOOKUPS_PER_CARD);
+      await Promise.all(unknown.map(async id => {
+        try {
+          const subs = await api.subscribers(id);
+          subsOf.set(id, subs);
+          await store.setSubs(id, subs);
+        } catch (err) {
+          if (!isSkip(err)) throw err;
         }
-        if (topic.inSubscriberRange(subs, settings)) fits.push({ ...candidate, subs });
-      }
-      return fits;
+      }));
+      return fits();
     };
 
     const makeCard = (candidate, pool, info, seed, labels, smallCreatorLabel) => {
@@ -103,7 +107,7 @@
           mutedPhrases: mutedTerms(blocks),
         };
         const usable = pool.candidates
-          .filter(c => !tried.has(c.id))
+          .filter(c => !tried.has(c.id) && !pool.usedChannels.has(c.channelId))
           .filter(c => c.lockup || pool.template)
           .filter(c => topic.passesCheapFilters(c, filterContext));
         const fits = await withSubscribers(topic.lookupOrder(usable, pool.terms), settings);
@@ -112,7 +116,7 @@
 
         let checks = 0;
         for (const candidate of ordered) {
-          if (tried.has(candidate.id)) continue;
+          if (tried.has(candidate.id) || pool.usedChannels.has(candidate.channelId)) continue;
           if (checks >= MAX_LANGUAGE_CHECKS_PER_CARD) break;
           checks++;
           tried.add(candidate.id);
@@ -124,8 +128,9 @@
             throw err;
           }
           // The title on the card comes from this page and can differ from the one filtered above.
-          if (info?.title && hasMutedTerm(info.title, blocks)) continue;
+          if (info?.title && (hasMutedTerm(info.title, blocks) || topic.isBlankTitle(info.title))) continue;
           if (language.decide(info, settings) !== 'keep') continue;
+          pool.usedChannels.add(candidate.channelId);
           await store.addShown(candidate.id);
           return makeCard(candidate, pool, info, seed, labels, settings.showSmallCreatorLabel ? smallCreatorLabel : null);
         }

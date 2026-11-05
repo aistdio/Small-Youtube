@@ -4,7 +4,17 @@ import '../../extension/src/lib/settings.js';
 import '../../extension/src/lib/topic.js';
 
 const { DEFAULTS } = globalThis.SmallYT?.settings ?? {};
-const { cleanTitle, buildQuery, topicTerms, bestPhrase, matchesPhrase, isNearCopy, passesCheapFilters, lookupOrder, inSubscriberRange, rank, chooseOrder } = globalThis.SmallYT?.topic ?? {};
+const { cleanTitle, buildQuery, topicTerms, bestPhrase, matchesPhrase, isNearCopy, isBlankTitle, passesCheapFilters, lookupOrder, inSubscriberRange, rank, chooseOrder } = globalThis.SmallYT?.topic ?? {};
+
+test('a title with nothing to read counts as blank', () => {
+  // Spaces, Hangul fillers, blank braille, zero-width characters and lone combining marks.
+  for (const title of ['', '   ', 'ㅤㅤㅤ', '⠀⠀', '​‍﻿', '　 ', 'ᅟᅠﾠ', '́឴', ' ㅤ ⠀ ', undefined, null]) {
+    assert.equal(isBlankTitle(title), true, JSON.stringify(title));
+  }
+  for (const title of ['a', 'ねえこ', '𝐏𝐥𝐚𝐲𝐥𝐢𝐬𝐭 허밍', '🌸', '2010', '!!!', 'ㅤ cats ㅤ']) {
+    assert.equal(isBlankTitle(title), false, title);
+  }
+});
 
 test('titles and queries', () => {
   assert.deepEqual(cleanTitle('Rina ⚡🧹 - Bass Shake [Zenless Zone Zero MMD] #mmd part 3', 'PulsePixel'), ['Rina', 'Bass', 'Shake']);
@@ -40,6 +50,7 @@ test('cheap filters', () => {
   const ok = { id: 'a', title: 'Epic Seven guide', channelName: 'X', channelId: 'UCx', views: 500, lengthSeconds: 300, isShort: false };
   const ctx = { seed: { id: 's', title: 'Epic Seven launch', channelName: 'Y' }, settings: DEFAULTS, shownIds: new Set(), hiddenChannels: new Set(), mutedPhrases: [] };
   assert.ok(passesCheapFilters(ok, ctx));
+  assert.ok(!passesCheapFilters({ ...ok, title: 'ㅤㅤ' }, ctx));
   assert.ok(!passesCheapFilters({ ...ok, lengthSeconds: 59 }, ctx));
   assert.ok(!passesCheapFilters({ ...ok, lengthSeconds: null }, ctx)); // live streams and premieres have no length
   assert.ok(!passesCheapFilters({ ...ok, isShort: true }, ctx));

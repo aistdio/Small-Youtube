@@ -6,12 +6,13 @@
   const MARK = 'data-small-yt';
   const HIDDEN = 'small-yt-hidden';
   const NEAR_SCREENS = 1.5;
-  const MAX_PENDING = 2;
+  const MAX_PENDING = 3;
   const FILL_DELAY_MS = 400;
   const RESIZE_DELAY_MS = 300;
   const CONTAINER_POLL_MS = 500;
   const CONTAINER_POLL_LIMIT = 40;
   const SEED_RETRY_LIMIT = 10;
+  const WATCH_VIDEO_MISSES = 2; // in a row: its results have run out, so the column's videos become seeds
   const SEED_SEARCH_RADIUS = 6;
   const RENDER_FAILURES_TO_STOP = 3;
 
@@ -31,6 +32,8 @@
   let observed = null;
   let startedFor = null;
   let seedUses = new Map();
+  let slotSeeds = new Map();
+  let watchVideoMisses = 0;
   let positionOffset = 0;
 
   const isOn = c => !!c?.settings?.enabled && c.settings.share !== 0;
@@ -70,19 +73,25 @@
     return title ? { id, title, channelName: document.querySelector(S.watchChannel)?.textContent?.trim() ?? '' } : null;
   };
 
-  // A seed near the card's position, so a card tends to sit close to the video that led to it.
-  // Above 50% there are more small cards than YouTube cards, so a seed can supply several.
-  const homeSeed = (list, position) => {
-    const maxUses = percent > 50 ? 3 : 1;
+  const seedFromCards = (list, position) => {
+    const uses = seed => seedUses.get(seed.id) ?? 0;
+    const maxUses = slots.seedUseLimit(percent);
     const seeds = list
-      .map((el, index) => ({ index, seed: ytPage.seedFromLockup(el.data?.content?.lockupViewModel) }))
-      .filter(({ seed }) => seed && (seedUses.get(seed.id) ?? 0) < maxUses);
+      .map((el, index) => ({ index, seed: ytPage.seedFromLockup(ytPage.lockupOf(el)) }))
+      .filter(({ seed }) => seed && uses(seed) < maxUses);
     if (!seeds.length) return null;
-    const near = seeds.filter(({ index }) => Math.abs(index - position) <= SEED_SEARCH_RADIUS);
-    const from = near.length ? near : seeds;
-    const { seed } = from[Math.floor(Math.random() * from.length)];
-    seedUses.set(seed.id, (seedUses.get(seed.id) ?? 0) + 1);
+    const choices = slots.seedChoices(seeds, position, SEED_SEARCH_RADIUS, uses);
+    const { seed } = choices[Math.floor(Math.random() * choices.length)];
+    seedUses.set(seed.id, uses(seed) + 1);
     return seed;
+  };
+
+  const usingWatchVideo = surf => surf === 'watch' && watchVideoMisses < WATCH_VIDEO_MISSES;
+
+  const removeCardsFromList = list => {
+    const parents = new Set(list.map(el => el.parentElement));
+    for (const el of list) el.remove();
+    for (const parent of parents) ytPage.syncList(parent);
   };
 
   const schedule = (delay = FILL_DELAY_MS) => {
@@ -121,15 +130,15 @@
   const resetIfFeedChanged = () => {
     const list = smallCards();
     if (!list.some(isRecycledCard)) return;
-    for (const el of list) {
-      if (isRecycledCard(el)) {
-        el.removeAttribute(MARK);
-        el.style.opacity = '';
-        el.style.transition = '';
-      } else {
-        el.remove();
-      }
+    const reused = list.filter(isRecycledCard);
+    for (const el of reused) {
+      el.removeAttribute(MARK);
+      el.style.opacity = '';
+      el.style.transition = '';
+      ytPage.forgetAdded(el);
     }
+    removeCardsFromList(list.filter(el => !reused.includes(el)));
+    for (const parent of new Set(reused.map(el => el.parentElement))) ytPage.syncList(parent);
     unhideAll();
     const asked = generation.bump(); // cards still on their way were picked for the old feed
     document.documentElement.setAttribute('data-small-yt-page', String(asked));
@@ -139,6 +148,8 @@
     renderFailures = 0;
     positionOffset = 0;
     seedUses = new Map();
+    slotSeeds = new Map();
+    watchVideoMisses = 0;
   };
 
   function fill() {
@@ -150,16 +161,17 @@
     const list = youTubeCards(surf);
     const owed = slots.smallCardsOwed(list.length, percent);
     while (pending < MAX_PENDING && requested < owed) {
-      const position = slots.targetAfter(requested, percent);
+      const position = slots.targetAfter(requested, percent) + positionOffset;
       if (!nearEnough(list, position)) return;
-      const seed = surf === 'watch' ? watchSeed() : homeSeed(list, position);
+      const seed = usingWatchVideo(surf) ? watchSeed() : seedFromCards(list, position);
       if (!seed) {
-        if (surf === 'watch') schedule(1000);
-        return; // on home, new YouTube cards bring new seeds and wake this up
+        if (usingWatchVideo(surf)) schedule(1000);
+        return; // otherwise new YouTube cards bring new seeds and wake this up
       }
       requested++;
       pending++;
-      send('needCard', { slotId: ++slotCounter, generation: generation.current(), seed });
+      slotSeeds.set(++slotCounter, seed);
+      send('needCard', { slotId: slotCounter, generation: generation.current(), seed });
     }
   }
 
@@ -186,6 +198,7 @@
         segment.push(child);
       }
     }
+    ytPage.syncList(root);
   };
 
   const place = async (card, asked) => {
@@ -211,8 +224,15 @@
     const referenceWidth = Math.round(anchor.getBoundingClientRect().width);
     const el = surf === 'watch' ? cards.createWatchCard(card.lockup, anchor) : cards.createHomeCard(card.lockup, anchor);
     cards.prepareFade(el);
-    if (replaced) replaced.before(el);
-    else insertAfterSmallCards(anchor, el);
+    if (surf === 'watch') {
+      // The column places the cards it loads later by counting its own children, so a card added
+      // beside them would push real cards out of order. Inside the card it follows, it isn't counted.
+      anchor.append(el);
+    } else {
+      if (replaced) replaced.before(el);
+      else insertAfterSmallCards(anchor, el);
+      ytPage.addToList(el);
+    }
     el.setAttribute(MARK, String(asked));
     placed++;
 
@@ -225,12 +245,13 @@
       replacedBelow: !!replaced && belowScreen(replaced),
     });
     if (!good || !wanted) {
-      el.remove();
+      removeCardsFromList([el]);
       if (generation.isCurrent(asked)) placed--;
       return good ? 'no-position' : 'failed';
     }
     el.setAttribute(MARK, String(asked));
     if (replaced) replaced.classList.add(HIDDEN);
+    else if (surf === 'watch') cards.matchGap(el, anchor);
     cards.remember(el, card);
     cards.fadeIn(el);
     if (surf === 'home') fixRows();
@@ -244,13 +265,13 @@
 
   const removeAll = () => {
     const hadCards = smallCards().length > 0;
-    for (const el of smallCards()) el.remove();
+    removeCardsFromList(smallCards());
     unhideAll();
     if (hadCards && surface() === 'home') fixRows();
   };
 
   const removeCards = list => {
-    for (const el of list) el.remove();
+    removeCardsFromList(list);
     if (surface() === 'home') fixRows();
     schedule();
   };
@@ -266,6 +287,8 @@
     seedRetries = 0;
     renderFailures = 0;
     seedUses = new Map();
+    slotSeeds = new Map();
+    watchVideoMisses = 0;
     positionOffset = 0;
     observer?.disconnect();
     observed = null;
@@ -286,18 +309,22 @@
     wait();
   };
 
-  const onCard = async ({ generation: asked, card }) => {
+  const onCard = async ({ generation: asked, slotId, card }) => {
     if (!generation.isCurrent(asked)) return;
+    const seed = slotSeeds.get(slotId);
+    slotSeeds.delete(slotId);
     pending = Math.max(0, pending - 1);
-    const onHome = surface() === 'home';
     const giveBackSlot = () => { requested = Math.max(0, requested - 1); };
+    if (card) watchVideoMisses = 0;
     if (card && !config?.paused) {
       const result = await place(card, asked);
       if (!generation.isCurrent(asked)) return;
       if (result === 'failed') renderFailures++;
       if (result !== 'placed') giveBackSlot();
-    } else if (card || onHome) {
-      giveBackSlot(); // try another seed later; each seed is only used a limited number of times
+    } else {
+      if (!card && seed?.id === currentVideoId()) watchVideoMisses++;
+      else if (!card && seed) seedUses.set(seed.id, Infinity); // it has nothing left, so don't spend requests on it again
+      giveBackSlot();
     }
     schedule();
   };
@@ -319,7 +346,8 @@
   const start = sendMessage => {
     send = sendMessage;
     const style = document.createElement('style');
-    style.textContent = `.${HIDDEN} { display: none !important; }`;
+    // A watch-column card holds the card replacing it, so only its own content is hidden.
+    style.textContent = `.${HIDDEN}:not(${S.lockup}) { display: none !important; } ${S.lockup}.${HIDDEN} > :not([${MARK}]) { display: none !important; }`;
     document.documentElement.append(style);
     // YouTube also fires this during the first load, which isn't a new page.
     document.addEventListener(ytPage.NAVIGATE_FINISH_EVENT, () => {

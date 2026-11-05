@@ -2,7 +2,34 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import '../../extension/src/lib/slots.js';
 
-const { resolveShare, smallCardsOwed, targetAfter, placeAfter, mayRequest, cardStillWanted, cardsToMove, createGeneration } = globalThis.SmallYT?.slots ?? {};
+const { resolveShare, smallCardsOwed, targetAfter, placeAfter, mayRequest, cardStillWanted, cardsToMove, createGeneration, seedUseLimit, seedChoices } = globalThis.SmallYT?.slots ?? {};
+
+test('a seed can supply enough cards to reach the share, even when some seeds fail', () => {
+  assert.equal(seedUseLimit(10), 2);
+  assert.equal(seedUseLimit(25), 2);
+  assert.equal(seedUseLimit(50), 3);
+  assert.equal(seedUseLimit(75), 7);
+  assert.equal(seedUseLimit(100), 3); // one replacement per YouTube card, like 50%
+});
+
+const seedAt = (id, index) => ({ index, seed: { id } });
+const choiceIds = (seeds, position, uses) => seedChoices(seeds, position, 6, s => uses[s.id] ?? 0).map(c => c.seed.id);
+
+test('a seed used once comes first, even far from the position, because its results are already fetched', () => {
+  assert.deepEqual(choiceIds([seedAt('far', 0), seedAt('near', 20)], 20, { far: 1 }), ['far']);
+});
+
+test('with none used once, new seeds near the position come first', () => {
+  assert.deepEqual(choiceIds([seedAt('far', 0), seedAt('near', 20)], 20, {}), ['near']);
+});
+
+test('with nothing near, any seed will do', () => {
+  assert.deepEqual(choiceIds([seedAt('a', 0), seedAt('b', 1)], 50, {}), ['a', 'b']);
+});
+
+test('among seeds used more than once, the least used comes first', () => {
+  assert.deepEqual(choiceIds([seedAt('a', 18), seedAt('b', 20)], 20, { a: 3, b: 2 }), ['b']);
+});
 
 test('slider ratios from the design', () => {
   assert.equal(smallCardsOwed(30, 0), 0);

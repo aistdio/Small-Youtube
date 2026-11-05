@@ -44,10 +44,22 @@
     return value <= 100 ? value : undefined;
   };
 
+  const REQUEST_STOPS = [1000, 3000, 5000, 10000, null];
+  const requestsToPos = value => {
+    const last = REQUEST_STOPS.length - 1;
+    if (value === null) return 1;
+    if (value <= REQUEST_STOPS[0]) return 0;
+    if (value >= REQUEST_STOPS[last - 1]) return (last - 1 + (1 - REQUEST_STOPS[last - 1] / value)) / last; // approaching "no limit"
+    const i = REQUEST_STOPS.findIndex(stop => value < stop) - 1;
+    return (i + (value - REQUEST_STOPS[i]) / (REQUEST_STOPS[i + 1] - REQUEST_STOPS[i])) / last;
+  };
+  const posToRequests = pos => nearestStop(pos, REQUEST_STOPS);
+
   // Spreads the small tiles evenly through the preview, like cards through the feed.
   const isSmallTile = (index, percent) => Math.floor(((index + 1) * percent) / 100) > Math.floor((index * percent) / 100);
 
   (globalThis.SmallYT ??= {}).scale = {
     STOPS, SHARE_STOPS, valueToPos, posToValue, parseTyped, formatValue, shareToPos, posToShare, parseShare, isSmallTile,
+    REQUEST_STOPS, requestsToPos, posToRequests,
   };
 })();

@@ -37,10 +37,10 @@ Mobile, Safari, the Shorts feed, accounts, a server, and community lists of good
 For each small card to add:
 
 1. **Watch the page** for new cards. This covers scrolling and YouTube's in-page navigation.
-2. **Pick a seed.** Home feed: a random YouTube video card near the next open position (see step 8), excluding ads, Shorts, mixes and live streams. Watch page: the video being watched, which supplies every card in that column.
+2. **Pick a seed.** Home feed: a random YouTube video card near the next open position (see step 8), excluding ads, Shorts, mixes and live streams. A seed used once comes first, wherever it sits, because its candidates are already fetched, so its next card costs far fewer requests. A seed that finds nothing isn't tried again. Each seed supplies a limited number of cards, about twice what the share needs per YouTube card, plus one. Watch page: the video being watched, until it misses twice in a row. Then the column's own videos become seeds in the same way.
 3. **Collect candidates, without cookies,** from the seed's related list and from a keyword search. Keywords come from the title (remove hashtags, emoji, brackets, channel name, "part N", stop words) plus the video's tags. Keep the extra results to fill later cards.
-4. **Cheap filters:** view range, at least 60 seconds, not a Short, mix, live stream or premiere, not the seed's channel, not a near-copy of the seed's title, no hidden channel or muted topic, not already shown. To save lookups, also skip videos over 300k views, even when the views range has no upper limit. Drop this cutoff when the chosen minimum is 300k or more.
-5. **Subscriber filter:** go through the remaining candidates, on-topic ones first, and look up at most 8 channels per card. Keep those in the subscriber range, and drop channels that hide their count. Cache counts for 7 days, and cached channels don't count toward the 8.
+4. **Cheap filters:** a title with something to read (some are only invisible characters), view range, at least 60 seconds, not a Short, mix, live stream or premiere, not the seed's channel, not a near-copy of the seed's title, no hidden channel or muted topic, not already shown. To save lookups, also skip videos over 300k views, even when the views range has no upper limit. Drop this cutoff when the chosen minimum is 300k or more.
+5. **Subscriber filter:** go through the remaining candidates, on-topic ones first, and look up at most 8 channels per card, all at once, with the request limits setting the pace. Keep those in the subscriber range, and drop channels that hide their count. Cache counts for 7 days, and cached channels don't count toward the 8. If 3 known channels already fit, skip the lookups. A seed gives at most one card per channel.
 6. **Rank:** on-topic videos (seed keywords in the title) go before off-topic ones. Inside each group, sort by views per subscriber, counting 0 subscribers as 1. Take the first 3, or fewer if fewer qualify, and pick one at random so results vary. Never pick "least views".
 7. **Language check** on the chosen video only (rules below). If it fails, take the next candidate in the ranking, up to 4 checks per card.
 8. **Insert** the card in the next open position below what the viewer is looking at, with a quiet fade-in. Positions come from the slider ratio, not from the seed, so spacing stays even. A card usually lands near its seed, but that isn't guaranteed. Slow cards simply take a later position. If nothing qualifies, add nothing.
@@ -56,7 +56,9 @@ Fetch the video's normal page with the user's account, so YouTube's own decision
 | Default audio is an auto-dub (track id ends `.10`) | Skip |
 | Original language is in "My languages" | Keep |
 | Original language is not in "My languages" | Skip |
-| No clear language | Skip, unless "Add videos in unknown languages" is on |
+| No audio tracks and no auto-captions | Keep, unless "Add videos with no detected speech" is off |
+| Speech in an unclear language, such as several sets of auto-captions | Skip |
+| Unreadable page, such as a consent page | Skip |
 
 Related-list cards sometimes already carry YouTube's "Auto-dubbed" label. Skip those early, before spending a page fetch. The label's text is localized, but its `iconName` (`PERSON_RADAR_FILLED`) isn't, so match on that.
 
@@ -74,7 +76,9 @@ With "Add videos labelled as AI" off, a video carrying YouTube's AI label is ski
 
 **How the list is read:** the first time `ytcfg` reports a logged-in user, load `/account_playback` in a hidden same-site frame. This happens once: save the result and don't read it again. A failed attempt doesn't count, so retry on a later page load, at most once a day. Find the settings link by structure, not by its text, which is localized: the attributed-string link without an external `href`. Open the dialog with synthetic pointer and mouse events, read the checked rows, and map their labels to codes through the `get_panel` response. Then remove the frame. Never press the dialog's confirm button. YouTube's own code makes the signed request, so the extension never touches a login secret.
 
-With "Don't add auto-dubbed videos" off, a video whose default audio is an auto-dub is kept. Every other video still goes through the language rules, so the page fetch, "My languages" and the unknown-language setting all stay in use.
+With "Don't add auto-dubbed videos" off, a video whose default audio is an auto-dub is kept. Every other video still goes through the language rules, so the page fetch, "My languages" and the no-speech setting all stay in use.
+
+In one measured home feed, 11 of 23 checked videos had no auto-captions, and they were mostly cat clips, animations and noise timers. The setting is named after that and on by default, because "unknown language" read as "languages you don't speak".
 
 ## Using the account
 
@@ -113,16 +117,17 @@ The same slider applies to the watch-page column. Never change autoplay.
 From top to bottom:
 
 - **Share slider:** snapping stops as above.
-- **Divider** with the text "What counts as small".
-- **Subscribers range:** two handles; stops at 0, 10, 100, 1k, 10k, no limit; default 10 to 10k.
+- **Divider** with the text "Settings".
+- **Channel subscribers range:** two handles; stops at 0, 10, 100, 1k, 10k, no limit; default 10 to 10k.
 - **Views range:** two handles; same stops; default 0 to no limit.
+- **Daily request limit:** one handle; stops at 1k, 3k, 5k, 10k, no limit; default 3k.
 - Each slider shows its value on the right in a box the user can click and type into, including values between stops.
 - **Settings**, one line each:
   - Show "Small Creator" on added videos (on)
   - Don't add auto-dubbed videos (on)
   - Add videos labelled as AI (on)
   - My languages: English ×, German ×, French ×, + (example; filled automatically)
-  - Add videos in unknown languages (off)
+  - Add videos with no detected speech (on)
   - Use my account for searches (off). Hint: "Closer to your taste, but searches appear in your YouTube history."
 - **Added videos watched: N:** a collapsed list, newest first, of added cards the user opened with a left or middle click on the thumbnail or title. Each title links to its video, and "Clear" empties the list and the count. A video opened twice counts once. It's stored only in the browser and keeps the latest 200 videos, while the count keeps going.
 - **Hidden channels and topics:** a small link to the list, with undo.
@@ -144,6 +149,8 @@ Cards are rendered by YouTube itself, not imitated, so they match its look in an
   - **Less of this topic:** mute one best phrase from the seed, such as "Epic Seven", matched whole in titles. Matching videos are no longer picked, and matching YouTube cards stop being seeds. The phrase appears in the hidden list, so a bad guess is easy to undo. If there's no clear phrase, stop using that seed's channel as a source instead.
 - This is stored locally. YouTube isn't told, so its own recommendations don't change.
 - **Rows:** adding a card can leave a gap before a full-width section such as the Shorts row. Keep rows complete using `--ytd-rich-grid-items-per-row`.
+- **Writing by position:** each time the home grid loads more cards, YouTube writes every entry of `data.contents` onto the element at the same position. So each added card gets an entry in that list, at its own position, and the list follows any moved or removed card. The watch column instead inserts new cards by counting its children, and changing its list makes it draw duplicates and stop loading. So a watch card is nested inside the card it follows, where it isn't counted.
+- **Copied state:** a watch card takes its neighbour's layout values one by one. Copying the neighbour's own properties shares its internal state, and the card snaps back to the neighbour's video.
 - **Reused elements:** when a filter chip changes the feed, YouTube reuses card elements for its own videos, including ones this extension added. If a small card shows a different video than the one remembered for it, those elements lose the mark and stay, other small cards go, and the fill restarts.
 - **Safety:** after rendering, compare the card with a visible neighbour, or at 100% with a width recorded before hiding YouTube's cards. If the title is missing or the width differs, remove it. A missing card is fine, a broken one isn't. Don't compare height strictly, because longer titles make stacked cards taller.
 
@@ -159,13 +166,15 @@ YouTube publishes no limits for these requests, so these are conservative.
 
 - No-cookie requests: at most 3 per second, 3 at once.
 - Account page fetches: at most 1 per 2 seconds, 1 at a time.
-- About 3,000 requests a day per browser. After that, add no new cards until the next day.
+- A daily request limit per browser, set in the popup: 3,000 by default. After that, add no new cards until the next UTC day, or until the limit is raised. With no limit, requests are still counted, and pauses still apply.
 - Fetch only for cards near the screen, and only in the visible tab, so several open tabs don't multiply the rate. Keep the request counters and the pause flag in `chrome.storage`, so all tabs share them.
 - On a 403, 429, repeated server errors or any captcha sign: stop everything for 30 minutes without retrying. All YouTube cards stay visible during the pause.
 - On a 404, skip that video or channel and carry on.
-- Page fetches don't follow redirects. A redirected page counts as unreadable, so its language is unknown. Five in a row pause for 30 minutes, because a captcha redirect looks the same as a consent page.
+- Page fetches don't follow redirects. A redirected page counts as unreadable, so its video is skipped. Five in a row pause for 30 minutes, because a captcha redirect looks the same as a consent page.
 
-Measured in a logged-in Chrome: about 15 requests per card (650 requests for 43 cards), and 2–5 cards in the first 25 seconds on home. At that rate the daily budget covers about 200 cards. Slow filling is fine, because cards appear quietly and nothing waits on them.
+Measured in a logged-in Chrome before seeds were reused: about 15 requests per card (650 requests for 43 cards), and 2–5 cards in the first 25 seconds on home. At that rate 3,000 requests cover about 200 cards. Measured after: about 11 requests per card on home, so about 270 cards. On the watch page, about 8 while one video is the seed and about 13 once the column's videos are.
+
+Every card needs at least one account fetch, so even a perfect run tops out at one card per 2 seconds. Measured on home: about one card per 4 seconds, because some language checks fail. One screen holds about 12 cards, so at 50% the share only holds at about one screen per 50 seconds. Measured at one screen per 15 seconds: 26% of cards passed. At one per 5 seconds: 8%. Spots the viewer has already passed stay unfilled.
 
 ## Measured so far
 
@@ -236,7 +245,7 @@ Quality signal so far: of 5 picks reviewed by hand, 4 passed on quality, and 1 f
 - Getting the short view count from search results in every language. Removing the last word worked for English and Russian, but won't work everywhere.
 - The combined ranking and the keywords-plus-tags method, which haven't been tested end to end.
 - Behavior over hours of daily use or on shared connections such as VPNs.
-- Firefox, Opera and Safari, ad blockers and other YouTube extensions, YouTube Premium or restricted accounts, and the consent page shown in some regions, which would leave languages unknown and so show no cards.
+- Firefox, Opera and Safari, ad blockers and other YouTube extensions, YouTube Premium or restricted accounts, and the consent page shown in some regions, which would leave every page unreadable and so show no cards.
 - How the native cards survive YouTube layout experiments. Other users may see different card types than the ones tested.
 - The `.4` and `.10` track pattern is undocumented and seen on a small sample. Keep it in one place.
 - Whether account page fetches influence recommendations. They didn't appear in watch history.

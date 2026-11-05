@@ -19,7 +19,7 @@
       </div>
     </section>
 
-    <p class="divider"><span data-i18n="smallHeading"></span></p>
+    <p class="divider"><span data-i18n="settingsHeading"></span></p>
 
     <section class="range">
       <h2 id="subs-label" data-i18n="subscribers"></h2>
@@ -42,6 +42,16 @@
         </div>
         <input class="value" id="views-min" type="text" autocomplete="off" data-i18n-aria="minimum">
         <input class="value" id="views-max" type="text" autocomplete="off" data-i18n-aria="maximum">
+      </div>
+    </section>
+
+    <section class="range">
+      <h2 id="requests-label" data-i18n="dailyRequests"></h2>
+      <div class="control">
+        <div class="track">
+          <input id="requests-slider" type="range" min="0" max="1" step="0.001" aria-labelledby="requests-label">
+        </div>
+        <input class="value" id="requests-value" type="text" autocomplete="off" aria-labelledby="requests-label">
       </div>
     </section>
 
@@ -68,8 +78,8 @@
       </div>
 
       <label class="switch">
-        <span data-i18n="showUnknown"></span>
-        <input id="show-unknown" type="checkbox" role="switch">
+        <span data-i18n="showNoSpeech"></span>
+        <input id="show-no-speech" type="checkbox" role="switch">
       </label>
 
       <label class="switch">

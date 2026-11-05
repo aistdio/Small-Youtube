@@ -73,6 +73,29 @@
     });
   };
 
+  const renderRequests = () => {
+    const limit = settings.dailyRequests;
+    $('requests-slider').value = scale.requestsToPos(limit);
+    $('requests-value').value = scale.formatValue(limit, NO_LIMIT());
+    $('requests-value').title = limit === null ? t('noLimitTitle') : '';
+  };
+
+  const setupRequests = () => {
+    const apply = limit => {
+      save({ dailyRequests: limit });
+      renderRequests();
+      renderNotice();
+    };
+    const applyPos = pos => apply(scale.posToRequests(pos));
+    $('requests-slider').addEventListener('input', e => applyPos(Number(e.target.value)));
+    stepKeys($('requests-slider'), scale.REQUEST_STOPS, scale.requestsToPos, applyPos);
+    $('requests-value').addEventListener('change', e => {
+      const typed = scale.parseTyped(e.target.value);
+      if (typed === undefined || typed === 0) renderRequests();
+      else apply(typed);
+    });
+  };
+
   // A range is two sliders on one track, plus a value box for each.
   const setupRange = (name, minKey, maxKey) => {
     const minSlider = $(`${name}-min-slider`);
@@ -211,12 +234,13 @@
     const pausedUntil = await store.getState('pausedUntil');
     const budget = await store.getState('budget');
     const today = new Date().toISOString().slice(0, 10);
+    const limit = settings.dailyRequests;
     const notice = $('notice');
     if (pausedUntil > Date.now()) {
       const minutes = Math.ceil((pausedUntil - Date.now()) / 60000);
       notice.textContent = t('pausedNotice').replace('{minutes}', minutes);
       notice.hidden = false;
-    } else if (budget?.day === today && budget.used >= 3000) {
+    } else if (limit !== null && budget?.day === today && budget.used >= limit) {
       notice.textContent = t('budgetNotice');
       notice.hidden = false;
     } else {
@@ -236,12 +260,13 @@
     if (settings.languages === null) await save({ languages: settingsLib.initialLanguages(navigator.language) });
 
     setupShare();
+    setupRequests();
     const renderSubs = setupRange('subs', 'subsMin', 'subsMax');
     const renderViews = setupRange('views', 'viewsMin', 'viewsMax');
     setupSwitch('show-small-creator', 'showSmallCreatorLabel');
     setupSwitch('skip-dubbed', 'skipDubbed');
     setupSwitch('show-ai', 'showAiVideos');
-    setupSwitch('show-unknown', 'showUnknownLanguage');
+    setupSwitch('show-no-speech', 'showNoSpeechVideos');
     setupSwitch('use-account', 'useAccountForSearches');
 
     $('add-language').addEventListener('change', e => {
@@ -266,6 +291,7 @@
     });
 
     renderShare();
+    renderRequests();
     renderSubs();
     renderViews();
     renderLanguages();

@@ -12,7 +12,7 @@ test('defaults match the design', () => {
   assert.equal(d.viewsMin, 0);
   assert.equal(d.viewsMax, null);
   assert.equal(d.skipDubbed, true);
-  assert.equal(d.showUnknownLanguage, false);
+  assert.equal(d.showNoSpeechVideos, true);
   assert.equal(d.useAccountForSearches, false);
   assert.equal(d.enabled, true);
   assert.equal(d.showAiVideos, true);
@@ -25,6 +25,10 @@ test('the Small Creator label setting is kept, and odd values become the default
 });
 
 test('odd settings become valid', () => {
+  assert.equal(normalize({}).dailyRequests, 3000);
+  assert.equal(normalize({ dailyRequests: 10000 }).dailyRequests, 10000);
+  assert.equal(normalize({ dailyRequests: null }).dailyRequests, null); // no limit
+  assert.equal(normalize({ dailyRequests: 'x' }).dailyRequests, 3000);
   assert.equal(normalize({ share: 33 }).share, 33); // typed into the value box
   assert.equal(normalize({ share: 150 }).share, 25);
   assert.equal(normalize({ share: 'x' }).share, 25);

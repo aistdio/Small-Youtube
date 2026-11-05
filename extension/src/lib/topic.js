@@ -66,8 +66,13 @@
     return shared / new Set([...setA, ...setB]).size >= NEAR_COPY_OVERLAP;
   };
 
+  // Some titles are made only of invisible characters, which would leave a card with nothing to read.
+  const INVISIBLE = /[\s\p{C}\p{M}⠀ᅟᅠㅤﾠ]/gu;
+  const isBlankTitle = title => !String(title ?? '').replace(INVISIBLE, '');
+
   const passesCheapFilters = (candidate, { seed, settings, shownIds, hiddenChannels, mutedPhrases }) => {
     const c = candidate;
+    if (isBlankTitle(c.title)) return false;
     if (c.id === seed.id || shownIds.has(c.id) || hiddenChannels.has(c.channelId)) return false;
     if (c.isShort || c.lengthSeconds == null || c.lengthSeconds < MIN_LENGTH_SECONDS) return false;
     if (typeof c.views !== 'number' || c.views < settings.viewsMin) return false;
@@ -105,7 +110,7 @@
   };
 
   (globalThis.SmallYT ??= {}).topic = {
-    cleanTitle, buildQuery, topicTerms, bestPhrase, matchesPhrase, isNearCopy, passesCheapFilters,
+    cleanTitle, buildQuery, topicTerms, bestPhrase, matchesPhrase, isNearCopy, isBlankTitle, passesCheapFilters,
     isOnTopic, lookupOrder, inSubscriberRange, rank, chooseOrder,
   };
 })();

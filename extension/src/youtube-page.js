@@ -39,13 +39,58 @@
     return { id: lockup.contentId, title, channelName };
   };
 
+  // The home grid shows a card's data directly. Watch-column cards hide it behind a function.
+  const lockupOf = el => (typeof el.rawProps?.data === 'function' ? el.rawProps.data() : el.data?.content?.lockupViewModel);
+
   // Read from the link because it works in every card type, and shows what's on screen right now.
   const shownVideoId = el => {
     const href = el.querySelector(SELECTORS.videoLink)?.getAttribute('href');
     return href ? new URL(href, 'https://www.youtube.com').searchParams.get('v') : null;
   };
 
+  // Every time the home grid loads more cards, YouTube writes each entry of its list onto the element at
+  // the same position. An added card with no entry of its own gets overwritten, along with its neighbours.
+  // So the list follows the order of the elements on the page. Entries not drawn yet stay at the end.
+  const orderEntries = (entries, elements, { entryOf, isAddedEntry }) => {
+    const own = entries.filter(e => !isAddedEntry(e));
+    const byData = new Map(own.map(e => [Object.values(e)[0], e]));
+    const ordered = [];
+    for (const el of elements) {
+      const entry = entryOf(el) ?? byData.get(el.data);
+      if (entry) ordered.push(entry);
+    }
+    const drawn = new Set(ordered);
+    return [...ordered, ...own.filter(e => !drawn.has(e))];
+  };
+
+  const addedEntryOf = new WeakMap();
+  const addedEntries = new WeakSet();
+
+  // Does nothing outside the home grid, or if YouTube stops keeping its list here. Added cards
+  // would then be overwritten, but the feed stays as it is.
+  const syncList = parent => {
+    const entries = parent?.closest?.(SELECTORS.homeGridRoot)?.data?.contents;
+    if (!Array.isArray(entries)) return;
+    const ordered = orderEntries(entries, [...parent.children], {
+      entryOf: el => addedEntryOf.get(el),
+      isAddedEntry: entry => addedEntries.has(entry),
+    });
+    if (ordered.length === entries.length && ordered.every((e, i) => e === entries[i])) return;
+    entries.splice(0, entries.length, ...ordered); // in place, because YouTube keeps this same array
+  };
+
+  const addToList = el => {
+    const entry = { richItemRenderer: el.data };
+    addedEntryOf.set(el, entry);
+    addedEntries.add(entry);
+    syncList(el.parentElement);
+  };
+
+  // For a card YouTube has taken over: the element is its own now, and our entry goes at the next sync.
+  const forgetAdded = el => addedEntryOf.delete(el);
+
   (globalThis.SmallYT ??= {}).ytPage = {
     SELECTORS, NAVIGATE_FINISH_EVENT, LANGUAGE_PANEL_REQUEST, ACCOUNT_PLAYBACK_PATH, ITEMS_PER_ROW_VAR, seedFromLockup, shownVideoId,
+    lockupOf, orderEntries, addToList, forgetAdded, syncList,
   };
 })();

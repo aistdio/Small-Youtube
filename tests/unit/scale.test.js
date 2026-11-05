@@ -2,7 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import '../../extension/popup/scale.js';
 
-const { STOPS, valueToPos, posToValue, parseTyped, formatValue, shareToPos, posToShare, parseShare, isSmallTile } = globalThis.SmallYT?.scale ?? {};
+const { STOPS, valueToPos, posToValue, parseTyped, formatValue, shareToPos, posToShare, parseShare, isSmallTile, REQUEST_STOPS, requestsToPos, posToRequests } = globalThis.SmallYT?.scale ?? {};
+
+test('the daily request slider has its own stops, and typed limits sit between them', () => {
+  assert.deepEqual(REQUEST_STOPS, [1000, 3000, 5000, 10000, null]);
+  for (const stop of REQUEST_STOPS) assert.equal(posToRequests(requestsToPos(stop)), stop);
+  assert.equal(requestsToPos(1000), 0);
+  assert.equal(requestsToPos(null), 1);
+  assert.equal(requestsToPos(500), 0); // below the first stop
+  assert.equal(posToRequests(0.3), 3000); // snaps to the nearest stop
+  assert.ok(requestsToPos(4000) > requestsToPos(3000) && requestsToPos(4000) < requestsToPos(5000));
+  assert.ok(requestsToPos(20000) > requestsToPos(10000) && requestsToPos(20000) < 1);
+});
 
 test('scale snaps to stops and places typed values between them', () => {
   assert.deepEqual(STOPS, [0, 10, 100, 1000, 10000, null]);

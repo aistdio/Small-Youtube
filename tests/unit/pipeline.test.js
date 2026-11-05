@@ -83,6 +83,65 @@ test('cached channels do not count toward the 8', async () => {
   for (const c of cached) assert.ok(!calls.subscribers.includes(c.channelId));
 });
 
+test('no new lookups while enough known channels fit', async () => {
+  const relatedResults = realRelated(14);
+  const { p, calls, store } = setup({ relatedResults });
+  for (const c of relatedResults.slice(1, 4)) await store.setSubs(c.channelId, 500);
+  assert.ok(await p.findCard(seed, settings, labels));
+  assert.equal(calls.subscribers.length, 0);
+});
+
+test('a second card from one seed fetches nothing but its language check', async () => {
+  const { p, calls } = setup({ relatedResults: realRelated(14) });
+  await p.findCard(seed, settings, labels);
+  const lookups = calls.subscribers.length;
+  assert.ok(await p.findCard(seed, settings, labels));
+  assert.equal(calls.subscribers.length, lookups);
+  assert.equal(calls.related, 1);
+  assert.equal(calls.watchInfo.length, 2);
+});
+
+test('channel lookups run together, so the request queue sets the pace', async () => {
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  let started = 0;
+  const { p } = setup({ subs: async () => { started++; await gate; return 500; }, relatedResults: realRelated(12) });
+  const finding = p.findCard(seed, settings, labels);
+  await new Promise(resolve => setTimeout(resolve, 20));
+  assert.equal(started, 8);
+  release();
+  assert.ok(await finding);
+});
+
+test('one channel appearing twice is looked up once', async () => {
+  const relatedResults = realRelated(4).map(c => ({ ...c, channelId: 'UCsame' }));
+  const { p, calls } = setup({ relatedResults });
+  assert.ok(await p.findCard(seed, settings, labels));
+  assert.deepEqual(calls.subscribers, ['UCsame']);
+});
+
+test('two cards from one seed come from different channels', async () => {
+  const relatedResults = realRelated(4).map((c, i) => ({ ...c, channelId: i < 3 ? 'UCsame' : 'UCother', channelName: i < 3 ? 'Same' : 'Other' }));
+  const { p } = setup({ relatedResults });
+  const first = await p.findCard(seed, settings, labels);
+  const second = await p.findCard(seed, settings, labels);
+  assert.notEqual(first.channelId, second.channelId);
+  assert.equal(await p.findCard(seed, settings, labels), null);
+});
+
+test('a failed language check does not use up the channel', async () => {
+  const relatedResults = realRelated(3).map(c => ({ ...c, channelId: 'UCsame', channelName: 'Same' }));
+  const { p } = setup({ relatedResults, watchInfo: (id, n) => (n === 1 ? dub : english) });
+  assert.equal((await p.findCard(seed, settings, labels)).channelId, 'UCsame');
+});
+
+test('a blank title on the language-check page moves to the next candidate', async () => {
+  const { p, calls } = setup({ watchInfo: (id, n) => (n === 1 ? { ...english, title: '⠀⠀' } : english) });
+  const card = await p.findCard(seed, settings, labels);
+  assert.equal(calls.watchInfo.length, 2);
+  assert.equal(card.title, english.title);
+});
+
 test('subscriber counts are cached, including hidden ones', async () => {
   const { p, store } = setup({ subs: id => (id.endsWith('1') ? null : 500) });
   await p.findCard(seed, settings, labels);
@@ -116,7 +175,7 @@ test('a candidate already labelled auto-dubbed spends no page fetch', async () =
   assert.equal(calls.watchInfo.length, 0);
 });
 
-test('a consent page counts as unknown and does not throw', async () => {
+test('a consent page gives no card and does not throw', async () => {
   const { p, calls } = setup({ watchInfo: () => null });
   assert.equal(await p.findCard(seed, settings, labels), null);
   assert.ok(calls.watchInfo.length >= 1);

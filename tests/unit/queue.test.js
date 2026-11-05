@@ -59,6 +59,43 @@ test('daily budget is shared and stops at 3000', async () => {
   await assert.rejects(q.run('plain', ok), { reason: 'budget' });
 });
 
+test('the daily limit comes from the settings', async () => {
+  const { q, store, clock } = fresh();
+  await store.setSettings({ dailyRequests: 1000 });
+  await store.setState('budget', { day: today(clock), used: 999 });
+  await q.run('plain', ok);
+  await assert.rejects(q.run('plain', ok), { reason: 'budget' });
+});
+
+test('with no daily limit, requests are counted but never stopped', async () => {
+  const { q, store, clock } = fresh();
+  await store.setSettings({ dailyRequests: null });
+  await store.setState('budget', { day: today(clock), used: 1e6 });
+  await q.run('plain', ok);
+  assert.equal((await store.getState('budget')).used, 1e6 + 1);
+});
+
+test('raising the daily limit lifts the stop right away', async () => {
+  const { q, store, clock } = fresh();
+  await store.setState('budget', { day: today(clock), used: 3000 });
+  await assert.rejects(q.run('plain', ok), { reason: 'budget' });
+  assert.equal(q.isHalted(), true);
+  const changes = [];
+  q.onPauseChange(halted => changes.push(halted));
+  await store.setSettings({ dailyRequests: 5000 });
+  assert.equal(q.isHalted(), false);
+  assert.deepEqual(changes, [false]);
+  await q.run('plain', ok);
+});
+
+test('changing another setting does not lift the daily stop', async () => {
+  const { q, store, clock } = fresh();
+  await store.setState('budget', { day: today(clock), used: 3000 });
+  await assert.rejects(q.run('plain', ok), { reason: 'budget' });
+  await store.setSettings({ share: 50 });
+  assert.equal(q.isHalted(), true);
+});
+
 test('budget counts requests and resets the next day', async () => {
   const { q, store, clock } = fresh();
   await q.run('plain', ok);

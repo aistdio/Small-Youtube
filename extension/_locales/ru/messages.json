@@ -11,11 +11,11 @@
   "random": {
     "message": "Случайно"
   },
-  "smallHeading": {
-    "message": "Что считать маленьким"
+  "settingsHeading": {
+    "message": "Настройки"
   },
   "subscribers": {
-    "message": "Подписчики"
+    "message": "Подписчики на канале"
   },
   "views": {
     "message": "Просмотры видео"
@@ -47,8 +47,8 @@
   "remove": {
     "message": "Убрать"
   },
-  "showUnknown": {
-    "message": "Добавлять видео на неизвестном языке"
+  "showNoSpeech": {
+    "message": "Добавлять видео без распознанной речи"
   },
   "useAccount": {
     "message": "Искать через мой аккаунт"
@@ -82,6 +82,9 @@
   },
   "pausedNotice": {
     "message": "Пауза на {minutes} мин., чтобы не превышать лимиты YouTube."
+  },
+  "dailyRequests": {
+    "message": "Лимит запросов в день"
   },
   "budgetNotice": {
     "message": "Дневной лимит исчерпан. Новые карточки появятся завтра."

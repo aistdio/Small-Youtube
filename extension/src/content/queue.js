@@ -2,7 +2,6 @@
 // YouTube publishes no limits for these requests, so these numbers are deliberately conservative.
 (() => {
   const PAUSE_MS = 30 * 60 * 1000;
-  const DAILY_BUDGET = 3000;
   const SERVER_ERRORS_TO_PAUSE = 3;
   const REDIRECTS_TO_PAUSE = 5;
   const HIDDEN_TAB_POLL_MS = 500;
@@ -44,7 +43,14 @@
       isHalted();
     };
     Promise.resolve(store.getState('pausedUntil')).then(until => { if (until) setPausedUntil(until); });
-    store.onChange(changes => { if (changes.pausedUntil) setPausedUntil(changes.pausedUntil.newValue); });
+    const limitIn = saved => globalThis.SmallYT.settings.normalize(saved).dailyRequests;
+    store.onChange(changes => {
+      if (changes.pausedUntil) setPausedUntil(changes.pausedUntil.newValue);
+      if (changes.settings && limitIn(changes.settings.newValue) !== limitIn(changes.settings.oldValue)) {
+        budgetOutDay = null; // the next request checks the new limit
+        isHalted();
+      }
+    });
 
     const pauseNow = async () => {
       const until = now() + PAUSE_MS;
@@ -56,7 +62,8 @@
       const day = today();
       const budget = await store.getState('budget');
       const used = budget?.day === day ? budget.used : 0;
-      if (used >= DAILY_BUDGET) {
+      const { dailyRequests } = await store.getSettings();
+      if (dailyRequests !== null && used >= dailyRequests) {
         budgetOutDay = day;
         isHalted();
         throw fail('budget');
