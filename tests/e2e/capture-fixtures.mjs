@@ -13,9 +13,11 @@ const DROP = new Set([
   'frameworkUpdates', 'topbar', 'engagementPanels', 'playerOverlays', 'overlay', 'loggingDirectives',
   'url_encoded_fmt_stream_map', 'signatureCipher', 'playerConfig', 'storyboards', 'attestation',
   'annotations', 'adPlacements', 'playerAds', 'cards', 'heartbeatParams', 'adSlots', 'microformat',
+  'responseContext', 'watchEndpointSupportedOnesieConfig',
 ]);
 
-// Removes tracking data and signed stream links, and keeps only the first few videos in each list.
+// Removes tracking data, visitor ids and stream links that carry this machine's IP address,
+// and keeps only the first few videos in each list.
 function trim(value) {
   if (Array.isArray(value)) {
     let kept = 0;
@@ -44,7 +46,11 @@ function trimPlayer(p) {
   };
 }
 
-const save = (name, text) => fs.writeFileSync(path.join(OUT, name), text);
+const save = (name, text) => {
+  // These files get committed, so stop if YouTube starts putting the IP address somewhere new.
+  if (/[?&]ip=\d/.test(text)) throw new Error(`${name} contains an IP address`);
+  fs.writeFileSync(path.join(OUT, name), text);
+};
 const saveJson = (name, obj) => save(name, JSON.stringify(obj));
 
 const inPage = {
