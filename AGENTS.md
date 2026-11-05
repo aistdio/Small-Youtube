@@ -10,7 +10,7 @@ A Manifest V3 browser extension that adds videos from small channels next to You
 - No-cookie requests: at most 3 per second, 3 at once. Account page fetches: at most 1 per 2 seconds, 1 at a time. About 3,000 requests a day per browser, shared across tabs. Only the visible tab fetches.
 - On 403, 429, repeated server errors or any captcha sign: stop everything for 30 minutes without retrying. On 404: skip that item. Page fetches don't follow redirects, and five redirects in a row also pause. Never try to get past a captcha.
 - Cards are rendered by YouTube itself. Never set a card's size, and never change autoplay.
-- Never open tabs, except the one welcome tab on install. Never press the confirm button in YouTube's language dialog.
+- Never open tabs, except the one welcome tab on install and watched-list links the user presses. Never press the confirm button in YouTube's language dialog.
 - A failed card is removed, never left broken. If YouTube sends something unexpected, the feed stays as it is.
 - User-facing strings live in `extension/_locales/`. Settings are one line each, and named after what the extension adds, because they don't affect YouTube's own recommendations.
 
@@ -65,6 +65,8 @@ npm run lint
 - `npm test`: unit tests on saved YouTube responses in `tests/fixtures/`. Run these after every change.
 - `npm run lint`: builds the Firefox copy and lints it. Expect one warning about the minimum Firefox version.
 - `npm run e2e`: the real extension in throwaway logged-out browsers, across languages and window sizes, plus Edge when installed. It uses real YouTube, so don't run it in a loop. Set `E2E_ONLY=chromium-en` for one setup, and `E2E_UI_ONLY=1` to skip YouTube.
+- The popup must fit Chrome's 600 px limit with its lists closed, and it's nearly full. E2e checks this.
+- The extension's strings follow the system language, not the e2e `locale`. To check another language, launch with `--lang=ru`.
 - Logged-out home feeds are empty, so home-feed behaviour can only be checked in a logged-in browser. Load `extension/` with "Load unpacked" at `chrome://extensions`.
 - Browser automation tools can make every tab report itself as visible, so background-tab behaviour can't be checked that way. A unit test covers it.
 - To reload an unpacked copy from YouTube's page console: `window.postMessage({ ns: 'small-yt', from: 'page', type: 'devReload' }, location.origin)`. Then reload the tab.
@@ -89,7 +91,7 @@ These were found in review and left for later:
 - Share changes apply at the next page load, so going from 100 to 25 leaves cards hidden until then.
 - Keyboard users' ⋮ actions use the last card pressed with a pointer, so they could hide the wrong channel.
 - Search-built cards show "6.8K" where some neighbours show "6.8K views".
-- Page scripts can post bridge messages (languages, blocks, budget, reloading an unpacked copy). They gain no privileges, but payloads aren't validated.
+- Page scripts can post bridge messages (languages, blocks, budget, watched videos, reloading an unpacked copy). They gain no privileges, but payloads aren't validated.
 - The dev reload may be live in signed Firefox builds, which may have no `update_url`.
 - Shared counters can lose updates, and two visible windows double the request rate.
 - One startup check polls forever if `ytcfg` never appears, and the candidate pools may hold tens of MB.

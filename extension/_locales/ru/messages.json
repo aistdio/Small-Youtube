@@ -29,6 +29,12 @@
   "noLimit": {
     "message": "∞"
   },
+  "showSmallCreator": {
+    "message": "Показывать \"Small Creator\" у добавленных видео"
+  },
+  "smallCreatorLabel": {
+    "message": "Small Creator"
+  },
   "skipDubbed": {
     "message": "Не добавлять видео с автодубляжем"
   },
@@ -49,6 +55,21 @@
   },
   "useAccountHint": {
     "message": "Ближе к вашим вкусам, но запросы появятся в истории поиска YouTube."
+  },
+  "watchedList": {
+    "message": "Посмотрено добавленных видео: {count}"
+  },
+  "watchedEmpty": {
+    "message": "Пока ничего."
+  },
+  "clear": {
+    "message": "Очистить"
+  },
+  "wordsList": {
+    "message": "Не добавлять видео со словами"
+  },
+  "addWord": {
+    "message": "Новое слово, затем Enter"
   },
   "hiddenList": {
     "message": "Скрытые каналы и темы"

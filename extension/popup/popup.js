@@ -21,6 +21,7 @@
     document.documentElement.lang = chrome.i18n.getUILanguage();
     for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
     for (const el of document.querySelectorAll('[data-i18n-aria]')) el.setAttribute('aria-label', t(el.dataset.i18nAria));
+    for (const el of document.querySelectorAll('[data-i18n-placeholder]')) el.placeholder = t(el.dataset.i18nPlaceholder);
   };
 
   let settings = null;
@@ -181,7 +182,30 @@
     ];
     $('blocks').replaceChildren(...rows);
     $('blocks-empty').hidden = rows.length > 0;
+    $('words').replaceChildren(...blocks.words.map(word => blockRow(word, { word })));
+    $('words-summary').textContent = blocks.words.length ? `${t('wordsList')}: ${blocks.words.length}` : t('wordsList');
   }
+
+  const watchedRow = video => {
+    const row = document.createElement('li');
+    const link = document.createElement('a');
+    link.href = `https://www.youtube.com/watch?v=${encodeURIComponent(video.id)}`;
+    link.target = '_blank';
+    link.rel = 'noreferrer';
+    link.textContent = video.title;
+    const channel = document.createElement('small');
+    channel.textContent = video.channelName;
+    row.append(link, channel);
+    return row;
+  };
+
+  const renderWatched = async () => {
+    const { count, videos } = await store.getWatched();
+    $('watched-summary').textContent = t('watchedList').replace('{count}', count);
+    $('watched').replaceChildren(...videos.map(watchedRow));
+    $('watched-empty').hidden = videos.length > 0;
+    $('watched-clear').hidden = videos.length === 0;
+  };
 
   const renderNotice = async () => {
     const pausedUntil = await store.getState('pausedUntil');
@@ -214,6 +238,7 @@
     setupShare();
     const renderSubs = setupRange('subs', 'subsMin', 'subsMax');
     const renderViews = setupRange('views', 'viewsMin', 'viewsMax');
+    setupSwitch('show-small-creator', 'showSmallCreatorLabel');
     setupSwitch('skip-dubbed', 'skipDubbed');
     setupSwitch('show-ai', 'showAiVideos');
     setupSwitch('show-unknown', 'showUnknownLanguage');
@@ -228,6 +253,17 @@
       save({ enabled: !settings.enabled });
       renderPower();
     });
+    $('add-word').addEventListener('keydown', async e => {
+      if (e.key !== 'Enter') return;
+      const word = e.target.value;
+      e.target.value = '';
+      await store.banWord(word);
+      renderBlocks();
+    });
+    $('watched-clear').addEventListener('click', async () => {
+      await store.clearWatched();
+      renderWatched();
+    });
 
     renderShare();
     renderSubs();
@@ -235,6 +271,7 @@
     renderLanguages();
     renderPower();
     renderBlocks();
+    renderWatched();
     renderNotice();
   };
 

@@ -62,7 +62,55 @@ test('blocks can be added and undone', async () => {
   await store.unblock({ channelId: 'UC3' });
   await store.unblock({ seedChannel: 'yuyu' });
   b = await store.getBlocks();
-  assert.deepEqual(b, { channels: [], phrases: [], seedChannels: [] });
+  assert.deepEqual(b, { channels: [], phrases: [], seedChannels: [], words: [] });
+});
+
+test('banned words are trimmed, kept once whatever their case, and can be undone', async () => {
+  const { store } = make();
+  await store.banWord('  Суицид ');
+  await store.banWord('суицид');
+  await store.banWord('   ');
+  await store.banWord('a');
+  assert.deepEqual((await store.getBlocks()).words, ['Суицид', 'a']);
+  await store.unblock({ word: 'Суицид' });
+  assert.deepEqual((await store.getBlocks()).words, ['a']);
+});
+
+const watchedVideo = id => ({ id, title: `Title ${id}`, channelName: `Channel ${id}` });
+
+test('watched videos are listed newest first', async () => {
+  const { store } = make();
+  assert.deepEqual(await store.getWatched(), { count: 0, videos: [] });
+  await store.addWatched(watchedVideo('a'));
+  await store.addWatched(watchedVideo('b'));
+  assert.deepEqual(await store.getWatched(), { count: 2, videos: [watchedVideo('b'), watchedVideo('a')] });
+});
+
+test('a video watched twice counts once and moves to the top', async () => {
+  const { store } = make();
+  await store.addWatched(watchedVideo('a'));
+  await store.addWatched(watchedVideo('b'));
+  await store.addWatched(watchedVideo('a'));
+  const watched = await store.getWatched();
+  assert.equal(watched.count, 2);
+  assert.deepEqual(watched.videos.map(v => v.id), ['a', 'b']);
+});
+
+test('the watched list keeps the latest 200, and the count keeps going', async () => {
+  const { store } = make();
+  for (let i = 0; i < 205; i++) await store.addWatched(watchedVideo('v' + i));
+  const watched = await store.getWatched();
+  assert.equal(watched.count, 205);
+  assert.equal(watched.videos.length, 200);
+  assert.equal(watched.videos[0].id, 'v204');
+  assert.ok(!watched.videos.some(v => v.id === 'v0'));
+});
+
+test('clearing the watched list resets the count', async () => {
+  const { store } = make();
+  await store.addWatched(watchedVideo('a'));
+  await store.clearWatched();
+  assert.deepEqual(await store.getWatched(), { count: 0, videos: [] });
 });
 
 test('changes reach listeners', async () => {

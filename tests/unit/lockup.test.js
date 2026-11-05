@@ -3,9 +3,38 @@ import assert from 'node:assert/strict';
 import { load } from './helpers.js';
 import '../../extension/src/youtube.js';
 
-const { parseSearch, parseNext, formatCount, buildLockup, setLockupTitle, addMenuEntries, pickTemplate } = globalThis.SmallYT?.yt ?? {};
+const { parseSearch, parseNext, formatCount, buildLockup, setLockupTitle, addMenuEntries, addSmallCreatorLabel, pickTemplate } = globalThis.SmallYT?.yt ?? {};
 
 const template = name => pickTemplate(parseNext(load(name), name.includes('.ru.') ? 'ru' : 'en'));
+const rowsOf = lockup => lockup.metadata.lockupMetadataViewModel.metadata.contentMetadataViewModel.metadataRows;
+
+test('the Small Creator label comes right after the date', () => {
+  const tpl = template('next.ru.json');
+  const [views, date] = rowsOf(tpl)[1].metadataParts;
+  const parts = rowsOf(addSmallCreatorLabel(tpl, 'Small Creator'))[1].metadataParts;
+  assert.deepEqual(parts, [views, date, { text: { content: 'Small Creator' } }]);
+});
+
+test('the label reaches screen readers too', () => {
+  const tpl = template('next.en.json');
+  const label = addSmallCreatorLabel(tpl, 'Small Creator').rendererContext.accessibilityContext.label;
+  assert.equal(label, `${tpl.rendererContext.accessibilityContext.label}, Small Creator`);
+});
+
+test('the label works on a card built from a search result', () => {
+  const tpl = template('next.en.json');
+  const c = parseSearch(load('search.en.json'), 'en').find(x => x.id !== tpl.contentId && x.lengthSeconds && typeof x.views === 'number');
+  const parts = rowsOf(addSmallCreatorLabel(buildLockup(tpl, c, 'en'), 'Small Creator'))[1].metadataParts;
+  assert.equal(parts[parts.length - 1].text.content, 'Small Creator');
+});
+
+test('a card with no views row keeps its shape, because the feed must stay as it is', () => {
+  const tpl = template('next.en.json');
+  const oneRow = addMenuEntries(tpl, []);
+  rowsOf(oneRow).splice(1);
+  assert.deepEqual(addSmallCreatorLabel(oneRow, 'Small Creator'), oneRow);
+  assert.deepEqual(addSmallCreatorLabel({}, 'Small Creator'), {});
+});
 
 test('builds a card from a search result', () => {
   const tpl = template('next.en.json');
@@ -31,6 +60,7 @@ test('the template is left unchanged', () => {
   buildLockup(tpl, c, 'en');
   addMenuEntries(tpl, ['x']);
   setLockupTitle(tpl, 'y');
+  addSmallCreatorLabel(tpl, 'z');
   assert.equal(JSON.stringify(tpl), before);
 });
 

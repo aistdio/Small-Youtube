@@ -1,6 +1,7 @@
 // Creates cards that YouTube itself renders, so they match its look in any theme, language or layout.
 (() => {
-  const S = globalThis.SmallYT.ytPage.SELECTORS;
+  const { ytPage } = globalThis.SmallYT;
+  const S = ytPage.SELECTORS;
 
   const WIDTH_TOLERANCE_PX = 1;
   const SETTLE_TIMEOUT_MS = 3000;
@@ -96,7 +97,26 @@
     }, true);
   };
 
+  // The added card whose video this click opens, if any. Buttons on the thumbnail and the channel link don't count.
+  const clickedCard = (e, cardMark) => {
+    if (e.type === 'auxclick' && e.button !== 1) return null; // of the extra buttons, only the middle one opens a video
+    if (e.target.closest?.('button, [role="button"]') || !e.target.closest?.(S.videoLink)) return null;
+    const el = e.target.closest(`[${cardMark}]`);
+    const card = el && recall(el);
+    return card && !isRecycled(card.videoId, ytPage.shownVideoId(el)) ? card : null;
+  };
+
+  const installWatchTracker = ({ cardMark, onWatch }) => {
+    const handle = e => {
+      const card = clickedCard(e, cardMark);
+      if (card) onWatch(card);
+    };
+    document.addEventListener('click', handle, true);
+    document.addEventListener('auxclick', handle, true);
+  };
+
   (globalThis.SmallYT ??= {}).cards = {
     verifyRendered, createWatchCard, createHomeCard, measure, settle, prepareFade, fadeIn, remember, recall, isRecycled, installMenu,
+    clickedCard, installWatchTracker,
   };
 })();

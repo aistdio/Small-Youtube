@@ -47,6 +47,11 @@
 
     <section class="settings">
       <label class="switch">
+        <span data-i18n="showSmallCreator"></span>
+        <input id="show-small-creator" type="checkbox" role="switch">
+      </label>
+
+      <label class="switch">
         <span data-i18n="skipDubbed"></span>
         <input id="skip-dubbed" type="checkbox" role="switch">
       </label>
@@ -75,10 +80,23 @@
         <input id="use-account" type="checkbox" role="switch">
       </label>
 
+      <details id="watched-list">
+        <summary id="watched-summary"></summary>
+        <ul id="watched"></ul>
+        <p id="watched-empty" data-i18n="watchedEmpty"></p>
+        <button id="watched-clear" type="button" data-i18n="clear"></button>
+      </details>
+
       <details id="hidden-list">
         <summary data-i18n="hiddenList"></summary>
         <ul id="blocks"></ul>
         <p id="blocks-empty" data-i18n="hiddenEmpty"></p>
+      </details>
+
+      <details id="word-list">
+        <summary id="words-summary"></summary>
+        <input id="add-word" type="text" autocomplete="off" data-i18n-placeholder="addWord" data-i18n-aria="addWord">
+        <ul id="words"></ul>
       </details>
     </section>
 

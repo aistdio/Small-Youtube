@@ -29,6 +29,12 @@
   "noLimit": {
     "message": "∞"
   },
+  "showSmallCreator": {
+    "message": "Show \"Small Creator\" on added videos"
+  },
+  "smallCreatorLabel": {
+    "message": "Small Creator"
+  },
   "skipDubbed": {
     "message": "Don't add auto-dubbed videos"
   },
@@ -49,6 +55,21 @@
   },
   "useAccountHint": {
     "message": "Closer to your taste, but searches appear in your YouTube history."
+  },
+  "watchedList": {
+    "message": "Added videos watched: {count}"
+  },
+  "watchedEmpty": {
+    "message": "Nothing yet."
+  },
+  "clear": {
+    "message": "Clear"
+  },
+  "wordsList": {
+    "message": "Don't add videos with these words"
+  },
+  "addWord": {
+    "message": "New word, then Enter"
   },
   "hiddenList": {
     "message": "Hidden channels and topics"

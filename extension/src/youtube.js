@@ -264,6 +264,17 @@
     return out;
   };
 
+  // One more part after the date. YouTube draws it, so it matches the rest of the row.
+  const addSmallCreatorLabel = (lockup, label) => {
+    const out = clone(lockup);
+    const parts = metaOf(out)?.metadata?.contentMetadataViewModel?.metadataRows?.[1]?.metadataParts;
+    if (!parts) return out;
+    parts.push({ text: { content: label } });
+    const a11y = out.rendererContext?.accessibilityContext;
+    if (a11y?.label) a11y.label = `${a11y.label}, ${label}`;
+    return out;
+  };
+
   const findList = value => {
     if (!value || typeof value !== 'object') return null;
     if (Array.isArray(value.listItems)) return value.listItems;
@@ -298,6 +309,6 @@
     ORIGINAL_TRACK_SUFFIX, AUTODUB_TRACK_SUFFIX, VIDEO_FILTER, CHANNEL_VIDEOS_TAB, ENDPOINTS,
     parseCount, formatCount, parseSearch, parseNext, parseSearchPage, parseWatchRelated,
     parseSubscribers, parseTags, parseWatchPage, continuationToken, collect,
-    pickTemplate, buildLockup, setLockupTitle, addMenuEntries,
+    pickTemplate, buildLockup, setLockupTitle, addSmallCreatorLabel, addMenuEntries,
   };
 })();

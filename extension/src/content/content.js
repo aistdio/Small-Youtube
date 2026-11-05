@@ -70,7 +70,7 @@
     },
     needCard: async ({ slotId, generation, seed }) => {
       const settings = await store.getSettings();
-      const card = settings.enabled && !queue.isHalted() ? await pipeline.findCard(seed, settings, labels()) : null;
+      const card = settings.enabled && !queue.isHalted() ? await pipeline.findCard(seed, settings, labels(), message('smallCreatorLabel')) : null;
       if (!orphaned) send(card ? 'card' : 'noCard', { slotId, generation, card });
     },
     hideChannel: async ({ channelId, channelName }) => {
@@ -78,6 +78,9 @@
     },
     lessTopic: async ({ seed }) => {
       await pipelineLib.handleLessTopic({ seed, tags: await pipeline.tagsFor(seed) }, store);
+    },
+    watched: async ({ videoId, title, channelName }) => {
+      await store.addWatched({ id: videoId, title, channelName });
     },
   };
 

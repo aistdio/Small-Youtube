@@ -24,7 +24,7 @@ Mobile, Safari, the Shorts feed, accounts, a server, and community lists of good
 
 ## Anti-goals: failure even if it technically works
 
-- Opening tabs or otherwise taking control of the browser. Searching in a new tab was considered and rejected. The one-time welcome tab on install is the only exception.
+- Opening tabs or otherwise taking control of the browser. Searching in a new tab was considered and rejected. The one-time welcome tab on install is the only exception. A watched-list link the user presses in the popup doesn't count, because the user opened it.
 - Removing YouTube's recommendations when the viewer didn't ask for that.
 - Showing force-dubbed videos.
 - Giving users captchas, or trying to get past one.
@@ -118,18 +118,21 @@ From top to bottom:
 - **Views range:** two handles; same stops; default 0 to no limit.
 - Each slider shows its value on the right in a box the user can click and type into, including values between stops.
 - **Settings**, one line each:
+  - Show "Small Creator" on added videos (on)
   - Don't add auto-dubbed videos (on)
   - Add videos labelled as AI (on)
   - My languages: English ×, German ×, French ×, + (example; filled automatically)
   - Add videos in unknown languages (off)
   - Use my account for searches (off). Hint: "Closer to your taste, but searches appear in your YouTube history."
+- **Added videos watched: N:** a collapsed list, newest first, of added cards the user opened with a left or middle click on the thumbnail or title. Each title links to its video, and "Clear" empties the list and the count. A video opened twice counts once. It's stored only in the browser and keeps the latest 200 videos, while the count keeps going.
 - **Hidden channels and topics:** a small link to the list, with undo.
+- **Don't add videos with these words:** a collapsed list with a box to type into, and undo. A word must match a whole word or phrase in the title, ignoring case, so "suicide" doesn't catch "suicides". It's checked on the candidate's title and on the title the card would show, and a YouTube card with the word stops being a seed. A video on the same topic with no such word in its title can still appear.
 - **ON/OFF button** at the very bottom.
 - When paused by a rate limit, one short line says so.
 
 ## Cards
 
-Cards are rendered by YouTube itself, not imitated, so they match its look in any theme, language or layout. There is no badge or extra button.
+Cards are rendered by YouTube itself, not imitated, so they match its look in any theme, language or layout. There is no extra button. Added videos can be hard to tell from YouTube's own, so an optional "Small Creator" text follows the date, as one more part of the card's own row that YouTube draws. It's on by default, reads the same in every language, and applies to new cards. A card with no such row goes without it.
 
 - **Card data:** related-list results already contain a lockup. Search results use a different format (`videoRenderer`), so build their lockup from a related-list lockup used as a template, swapping the video ID, title, thumbnail, avatar, channel, views, age and length. Drop the template's tracking and player params, and any extra rows such as "New". A smoke test passed; if this stops working, use search only to reach more related lists.
 - **Home feed:** create a `ytd-rich-item-renderer` and set its `data` to `{ content: { lockupViewModel } }`.

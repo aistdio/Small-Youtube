@@ -16,6 +16,12 @@ test('defaults match the design', () => {
   assert.equal(d.useAccountForSearches, false);
   assert.equal(d.enabled, true);
   assert.equal(d.showAiVideos, true);
+  assert.equal(d.showSmallCreatorLabel, true);
+});
+
+test('the Small Creator label setting is kept, and odd values become the default', () => {
+  assert.equal(normalize({ showSmallCreatorLabel: false }).showSmallCreatorLabel, false);
+  assert.equal(normalize({ showSmallCreatorLabel: 'x' }).showSmallCreatorLabel, true);
 });
 
 test('odd settings become valid', () => {

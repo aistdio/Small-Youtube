@@ -14,8 +14,9 @@
     throw err;
   };
 
-  const seedAllowed = (seed, blocks) => !blocks.seedChannels.includes(seed.channelName)
-    && !blocks.phrases.some(phrase => topic.matchesPhrase(seed.title, phrase));
+  const mutedTerms = blocks => [...blocks.phrases, ...blocks.words];
+  const hasMutedTerm = (title, blocks) => mutedTerms(blocks).some(term => topic.matchesPhrase(title, term));
+  const seedAllowed = (seed, blocks) => !blocks.seedChannels.includes(seed.channelName) && !hasMutedTerm(seed.title, blocks);
 
   const createPipeline = ({ api, store, rng, context }) => {
     const pools = new Map();
@@ -70,12 +71,14 @@
       return fits;
     };
 
-    const makeCard = (candidate, pool, info, seed, labels) => {
+    const makeCard = (candidate, pool, info, seed, labels, smallCreatorLabel) => {
       const base = candidate.lockup ?? yt.buildLockup(pool.template, candidate, context.hl);
       const titled = info?.title ? yt.setLockupTitle(base, info.title) : base;
+      const labelled = smallCreatorLabel ? yt.addSmallCreatorLabel(titled, smallCreatorLabel) : titled;
       return {
-        lockup: yt.addMenuEntries(titled, labels),
+        lockup: yt.addMenuEntries(labelled, labels),
         videoId: candidate.id,
+        title: info?.title ?? candidate.title,
         channelId: candidate.channelId,
         channelName: candidate.channelName,
         seed,
@@ -87,7 +90,7 @@
       return api.tags(seed.id).catch(() => []);
     };
 
-    const findCard = async (seed, settings, labels) => {
+    const findCard = async (seed, settings, labels, smallCreatorLabel) => {
       try {
         const blocks = await store.getBlocks();
         if (!seedAllowed(seed, blocks)) return null;
@@ -97,7 +100,7 @@
           settings,
           shownIds: await store.getShown(),
           hiddenChannels: new Set(blocks.channels.map(c => c.id)),
-          mutedPhrases: blocks.phrases,
+          mutedPhrases: mutedTerms(blocks),
         };
         const usable = pool.candidates
           .filter(c => !tried.has(c.id))
@@ -120,9 +123,11 @@
             if (isSkip(err)) continue;
             throw err;
           }
+          // The title on the card comes from this page and can differ from the one filtered above.
+          if (info?.title && hasMutedTerm(info.title, blocks)) continue;
           if (language.decide(info, settings) !== 'keep') continue;
           await store.addShown(candidate.id);
-          return makeCard(candidate, pool, info, seed, labels);
+          return makeCard(candidate, pool, info, seed, labels, settings.showSmallCreatorLabel ? smallCreatorLabel : null);
         }
         return null;
       } catch {

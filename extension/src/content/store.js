@@ -3,7 +3,9 @@
 (() => {
   const CHANNEL_CACHE_MS = 7 * 24 * 3600 * 1000;
   const SHOWN_LIMIT = 2000;
-  const NO_BLOCKS = { channels: [], phrases: [], seedChannels: [] };
+  const WATCHED_LIMIT = 200;
+  const NO_BLOCKS = { channels: [], phrases: [], seedChannels: [], words: [] };
+  const NO_WATCHED = { count: 0, videos: [] };
 
   const createStore = (chromeApi, now) => {
     const { normalize } = globalThis.SmallYT.settings;
@@ -69,11 +71,27 @@
     const muteSeedChannel = name => updateBlocks(b => {
       if (!b.seedChannels.includes(name)) b.seedChannels = [...b.seedChannels, name];
     });
+    const banWord = word => updateBlocks(b => {
+      const clean = word.trim();
+      if (clean && !b.words.some(w => w.toLowerCase() === clean.toLowerCase())) b.words = [...b.words, clean];
+    });
     const unblock = item => updateBlocks(b => {
       if (item.channelId) b.channels = b.channels.filter(c => c.id !== item.channelId);
       if (item.phrase) b.phrases = b.phrases.filter(p => p !== item.phrase);
       if (item.seedChannel) b.seedChannels = b.seedChannels.filter(s => s !== item.seedChannel);
+      if (item.word) b.words = b.words.filter(w => w !== item.word);
     });
+
+    const getWatched = async () => ({ ...NO_WATCHED, ...(await get('watched')) });
+    const addWatched = async video => {
+      const { count, videos } = await getWatched();
+      const others = videos.filter(v => v.id !== video.id);
+      await set('watched', {
+        count: others.length === videos.length ? count + 1 : count,
+        videos: [video, ...others].slice(0, WATCHED_LIMIT),
+      });
+    };
+    const clearWatched = () => set('watched', NO_WATCHED);
 
     const onChange = fn => {
       try {
@@ -87,7 +105,7 @@
 
     return {
       isAlive, getSettings, setSettings, getSubs, setSubs, getShown, addShown, getBlocks, hideChannel, muteTopic,
-      muteSeedChannel, unblock, onChange, getState: get, setState: set,
+      muteSeedChannel, banWord, unblock, getWatched, addWatched, clearWatched, onChange, getState: get, setState: set,
     };
   };
 

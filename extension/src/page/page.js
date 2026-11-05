@@ -3,6 +3,7 @@
   const { feed, cards, languages } = globalThis.SmallYT;
   const NS = 'small-yt';
   const CONFIG_POLL_MS = 300;
+  const CARD_MARK = 'data-small-yt';
   let labels = [];
   let readingLanguages = false;
 
@@ -43,7 +44,7 @@
   });
 
   cards.installMenu({
-    cardMark: 'data-small-yt',
+    cardMark: CARD_MARK,
     getLabels: () => labels,
     onLessTopic: (el, card) => {
       send('lessTopic', { seed: card.seed });
@@ -53,6 +54,11 @@
       send('hideChannel', { channelId: card.channelId, channelName: card.channelName });
       feed.removeCards(feed.smallCards().filter(el => cards.recall(el)?.channelId === card.channelId));
     },
+  });
+
+  cards.installWatchTracker({
+    cardMark: CARD_MARK,
+    onWatch: card => send('watched', { videoId: card.videoId, title: card.title, channelName: card.channelName }),
   });
 
   feed.start(send);

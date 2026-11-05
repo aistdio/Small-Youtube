@@ -200,6 +200,57 @@ test('hidden channels and muted topics are respected', async () => {
   assert.equal(card.videoId, 'related0000'); // the only title without the muted phrase
 });
 
+const lastPartOfViewsRow = card => card.lockup.metadata.lockupMetadataViewModel.metadata.contentMetadataViewModel.metadataRows[1].metadataParts.at(-1).text.content;
+
+test('the card carries the Small Creator label when the setting is on', async () => {
+  const { p } = setup();
+  const card = await p.findCard(seed, settings, labels, 'Small Creator');
+  assert.equal(lastPartOfViewsRow(card), 'Small Creator');
+});
+
+test('the card has no label when the setting is off', async () => {
+  const { p } = setup();
+  const card = await p.findCard(seed, { ...settings, showSmallCreatorLabel: false }, labels, 'Small Creator');
+  assert.ok(!JSON.stringify(card.lockup).includes('Small Creator'));
+});
+
+test('the card knows the title it shows, for the watched list', async () => {
+  const { p } = setup();
+  const card = await p.findCard(seed, settings, labels);
+  assert.equal(card.title, 'Real title');
+});
+
+test('a banned word skips videos whose title has it, whatever the case', async () => {
+  const { p, store } = setup();
+  await store.banWord('EPIC seven');
+  const card = await p.findCard({ ...seed, title: 'Something else', id: 'x' }, settings, labels);
+  assert.equal(card.videoId, 'related0000'); // the only title without the banned words
+});
+
+test('a banned word must match exactly, so part of a word does not count', async () => {
+  const { p, store } = setup();
+  await store.banWord('Sev');
+  const card = await p.findCard({ ...seed, title: 'Something else', id: 'x' }, settings, labels);
+  assert.notEqual(card.videoId, 'related0000'); // on-topic "Epic Seven story" titles are still allowed
+});
+
+test('a banned word in the title the card would show also skips the video', async () => {
+  const { p, store, calls } = setup({
+    watchInfo: (id, nth) => ({ ...english, title: nth === 1 ? 'A forbidden title' : 'Clean title' }),
+  });
+  await store.banWord('Forbidden');
+  const card = await p.findCard(seed, settings, labels);
+  assert.equal(card.title, 'Clean title');
+  assert.equal(calls.watchInfo.length, 2);
+});
+
+test('a seed with a banned word costs no requests', async () => {
+  const { p, calls, store } = setup();
+  await store.banWord('epic seven');
+  assert.equal(await p.findCard(seed, settings, labels), null);
+  assert.equal(calls.related + calls.search + calls.tags, 0);
+});
+
 const { handleLessTopic, seedAllowed } = globalThis.SmallYT?.pipeline ?? {};
 
 test('less of this topic mutes the best phrase', async () => {
@@ -217,9 +268,10 @@ test('with no clear phrase it stops using the seed channel', async () => {
 });
 
 test('muted topics and seed channels stop seeds', () => {
-  assert.equal(seedAllowed({ title: 'Epic Seven news', channelName: 'A' }, { phrases: ['Epic Seven'], seedChannels: [] }), false);
-  assert.equal(seedAllowed({ title: 'Other', channelName: 'yuyu' }, { phrases: [], seedChannels: ['yuyu'] }), false);
-  assert.equal(seedAllowed({ title: 'Other', channelName: 'A' }, { phrases: ['Epic Seven'], seedChannels: ['yuyu'] }), true);
+  assert.equal(seedAllowed({ title: 'Epic Seven news', channelName: 'A' }, { phrases: ['Epic Seven'], seedChannels: [], words: [] }), false);
+  assert.equal(seedAllowed({ title: 'Other', channelName: 'yuyu' }, { phrases: [], seedChannels: ['yuyu'], words: [] }), false);
+  assert.equal(seedAllowed({ title: 'Epic Seven news', channelName: 'A' }, { phrases: [], seedChannels: [], words: ['seven'] }), false);
+  assert.equal(seedAllowed({ title: 'Other', channelName: 'A' }, { phrases: ['Epic Seven'], seedChannels: ['yuyu'], words: ['seven'] }), true);
 });
 
 test('a blocked seed costs no requests', async () => {

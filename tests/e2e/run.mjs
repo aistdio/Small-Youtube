@@ -51,8 +51,10 @@ const checkWatchColumn = async (page, setup) => {
       youTubeCards: document.querySelectorAll('ytd-watch-next-secondary-results-renderer yt-lockup-view-model:not([data-small-yt])').length,
       title: card.querySelector('h3')?.textContent?.trim(),
       opacity: getComputedStyle(card).opacity,
+      text: card.innerText,
     };
   }, SMALL);
+  assert.match(report.text, /Small Creator/, 'the label shows on the card');
   assert.equal(report.cardWidth, report.neighbourWidth, 'same width as neighbour');
   assert.ok(report.youTubeCards >= before, 'YouTube cards stay');
   assert.ok(report.title, 'card has a title');
@@ -65,6 +67,16 @@ const checkWatchColumn = async (page, setup) => {
   await link.click({ timeout: 15000 });
   await page.waitForFunction(id => location.search.includes(id), expected, { timeout: 15000 });
   assert.equal(await page.evaluate(() => window.__smallYtMarker), 'same-page', 'opens without a full reload');
+
+  const sw = await worker(page.context());
+  let watched = null;
+  for (let i = 0; i < 20 && !watched?.videos?.length; i++) {
+    await page.waitForTimeout(250);
+    watched = (await sw.evaluate(() => chrome.storage.local.get('watched'))).watched;
+  }
+  assert.equal(watched?.count, 1, 'the click is counted');
+  assert.equal(watched.videos[0].id, expected, 'the clicked video is listed');
+  assert.ok(watched.videos[0].title && watched.videos[0].channelName, 'with its title and channel');
   return 'ok';
 };
 
@@ -190,6 +202,42 @@ const checkPopup = async (ctx, setup) => {
   await popup.locator('#show-ai').click();
   assert.equal((await stored()).showAiVideos, false);
   await popup.locator('#show-ai').click();
+
+  assert.equal(await popup.locator('#show-small-creator').isChecked(), true, 'the label is on by default');
+  await popup.locator('#show-small-creator').click();
+  assert.equal((await stored()).showSmallCreatorLabel, false);
+  await popup.locator('#show-small-creator').click();
+
+  const summary = id => popup.locator(id).textContent();
+  const words = async () => (await popup.evaluate(() => chrome.storage.local.get('blocks'))).blocks?.words;
+  const plainWordsSummary = await summary('#words-summary');
+  await popup.locator('#word-list summary').click();
+  await popup.locator('#add-word').fill('  suicide ');
+  await popup.locator('#add-word').press('Enter');
+  await popup.waitForFunction(() => document.querySelectorAll('#words li').length === 1);
+  assert.deepEqual(await words(), ['suicide']);
+  assert.equal(await popup.locator('#add-word').inputValue(), '', 'the box is ready for the next word');
+  assert.equal(await summary('#words-summary'), `${plainWordsSummary}: 1`);
+  await popup.locator('#words li button').click();
+  await popup.waitForFunction(() => document.querySelectorAll('#words li').length === 0);
+  assert.deepEqual(await words(), []);
+  assert.equal(await summary('#words-summary'), plainWordsSummary);
+  await popup.locator('#word-list summary').click();
+
+  assert.match(await summary('#watched-summary'), /\b0$/, 'nothing watched yet');
+  assert.equal(await popup.locator('#watched-clear').isHidden(), true);
+  await popup.evaluate(() => chrome.storage.local.set({ watched: { count: 7, videos: [{ id: 'abc_123', title: '<b>A video</b>', channelName: 'A channel' }] } }));
+  await popup.reload();
+  await popup.waitForFunction(() => document.querySelectorAll('#watched li').length === 1);
+  assert.match(await summary('#watched-summary'), /\b7$/, 'the count can be higher than the list is long');
+  await popup.locator('#watched-list summary').click();
+  const row = popup.locator('#watched li a');
+  assert.equal(await row.textContent(), '<b>A video</b>', 'a title is only ever text');
+  assert.equal(await row.getAttribute('href'), 'https://www.youtube.com/watch?v=abc_123');
+  await popup.locator('#watched-clear').click();
+  await popup.waitForFunction(() => document.querySelectorAll('#watched li').length === 0);
+  assert.match(await summary('#watched-summary'), /\b0$/, 'clearing resets the count');
+  await popup.locator('#watched-list summary').click();
 
   await popup.locator('#power').click();
   assert.equal((await stored()).enabled, false);
