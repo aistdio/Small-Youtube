@@ -39,7 +39,13 @@
     return { id: lockup.contentId, title, channelName };
   };
 
+  // Read from the link because it works in every card type, and shows what's on screen right now.
+  const shownVideoId = el => {
+    const href = el.querySelector(SELECTORS.videoLink)?.getAttribute('href');
+    return href ? new URL(href, 'https://www.youtube.com').searchParams.get('v') : null;
+  };
+
   (globalThis.SmallYT ??= {}).ytPage = {
-    SELECTORS, NAVIGATE_FINISH_EVENT, LANGUAGE_PANEL_REQUEST, ACCOUNT_PLAYBACK_PATH, ITEMS_PER_ROW_VAR, seedFromLockup,
+    SELECTORS, NAVIGATE_FINISH_EVENT, LANGUAGE_PANEL_REQUEST, ACCOUNT_PLAYBACK_PATH, ITEMS_PER_ROW_VAR, seedFromLockup, shownVideoId,
   };
 })();

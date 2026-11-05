@@ -64,8 +64,11 @@
   const remember = (el, card) => known.set(el, card);
   const recall = el => known.get(el);
 
-  // The menu is YouTube's own, built from data we extended. Our entries borrow an existing entry's
-  // action, so their clicks must be caught before YouTube handles them.
+  // YouTube reuses card elements when a filter chip changes the feed, ours included.
+  const isRecycled = (rememberedId, shownId) => !!rememberedId && !!shownId && rememberedId !== shownId;
+
+  // The menu is YouTube's own, built from data we extended. Our entries have no action of their own,
+  // so their clicks are handled here.
   const closeMenu = () => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true }));
     document.body.click();
@@ -94,6 +97,6 @@
   };
 
   (globalThis.SmallYT ??= {}).cards = {
-    verifyRendered, createWatchCard, createHomeCard, measure, settle, prepareFade, fadeIn, remember, recall, installMenu,
+    verifyRendered, createWatchCard, createHomeCard, measure, settle, prepareFade, fadeIn, remember, recall, isRecycled, installMenu,
   };
 })();

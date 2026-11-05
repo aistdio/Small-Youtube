@@ -185,6 +185,8 @@ Native cards also passed in a logged-in Chrome: home card look, ⋮ menu with ad
 | 100% | 3 cards replaced below the screen after about 30 s; nothing on screen changed |
 | Forced pause | All hidden cards came back |
 | OFF | All small cards removed without a reload |
+| Filter chip on home | YouTube reused small-card elements for its own videos; they lose the mark and the fill restarts for the new feed |
+| Subscriptions, then Home | Home page stays hidden in the document; new cards appear on return |
 | Language check | 0 of the last 10 picks default to an auto-dub |
 | Watch history after 43 picks shown, none clicked | 0 appeared |
 | Search history, defaults | 0 new entries |

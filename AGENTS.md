@@ -36,6 +36,8 @@ No build step. Each source file is a classic script that adds itself to `globalT
 (() => { const api = { /* ... */ }; (globalThis.SmallYT ??= {}).name = api; })();
 ```
 
+**YouTube reuses card elements** when a filter chip changes the feed, including ones the extension added, and keeps earlier pages hidden in the document. So name the page in selectors, and check what a marked card is showing before trusting the mark.
+
 **Don't list a file in two `content_scripts` entries.** Chrome injects it only once, in the first entry's world, and the other world silently breaks. A test guards this.
 
 ## Testing

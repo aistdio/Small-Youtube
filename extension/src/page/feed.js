@@ -114,7 +114,35 @@
     });
   };
 
+  const isRecycledCard = el => cards.isRecycled(cards.recall(el)?.videoId, ytPage.shownVideoId(el));
+
+  // A filter chip swaps the feed without a navigation, and YouTube reuses elements for its new cards.
+  // Those are YouTube's now, so they stay and lose our mark, and the fill starts over for the new feed.
+  const resetIfFeedChanged = () => {
+    const list = smallCards();
+    if (!list.some(isRecycledCard)) return;
+    for (const el of list) {
+      if (isRecycledCard(el)) {
+        el.removeAttribute(MARK);
+        el.style.opacity = '';
+        el.style.transition = '';
+      } else {
+        el.remove();
+      }
+    }
+    unhideAll();
+    const asked = generation.bump(); // cards still on their way were picked for the old feed
+    document.documentElement.setAttribute('data-small-yt-page', String(asked));
+    requested = 0;
+    placed = 0;
+    pending = 0;
+    renderFailures = 0;
+    positionOffset = 0;
+    seedUses = new Map();
+  };
+
   function fill() {
+    resetIfFeedChanged();
     if (!isOn(config) || config.paused || renderFailures >= RENDER_FAILURES_TO_STOP) return;
     const surf = surface();
     if (!surf) return;
