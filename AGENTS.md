@@ -83,26 +83,6 @@ Cards vanish or requests fail? In order:
 
 The audio track suffixes (`.4` original, `.10` auto-dub), the auto-dub icon, the AI label's shape and the menu and card data shapes are undocumented YouTube behaviour, seen in testing. Expect them to change eventually. If the AI setting stops working, nothing visibly breaks, so check it with a labelled video.
 
-## TODO
+## Known issues
 
-Remind the user of these at the start of each session, until they're done. Then remove them.
-
-- **Raise the ceiling on added videos.** Added cards top out at about 56% of the feed, because requests aren't optimized enough to find more. Ideas:
-  - Speed up account page fetches from 1 per 2 seconds to 1 per second (`account: lane(2000, 1)` in `src/content/queue.js`), perhaps with a slider like the others. This changes a limit in "Rules that must hold", and a block could land on the user's account. The popup is nearly full, so a slider may not fit.
-  - Keep videos that were found but never shown because the user didn't scroll far enough, and use them for later cards. They were found for older seeds, so check that they still suit the feed. `src/content/pipeline.js` already keeps some candidates per seed in `pools`.
-
-## Known minor issues
-
-These were found in review and left for later:
-
-- A card counter can drift after a restart. Dropped cards stay in the shown list, and stale requests aren't cancelled.
-- The captcha check matches `g-recaptcha` in any short response, including JSON.
-- An unreadable channel reply is cached as a hidden subscriber count for 7 days.
-- Share changes apply at the next page load, so going from 100 to 25 leaves cards hidden until then.
-- Keyboard users' ⋮ actions use the last card pressed with a pointer, so they could hide the wrong channel.
-- Search-built cards show "6.8K" where some neighbours show "6.8K views".
-- Page scripts can post bridge messages (languages, blocks, budget, watched videos, reloading an unpacked copy). They gain no privileges, but payloads aren't validated.
-- The dev reload may be live in signed Firefox builds, which may have no `update_url`.
-- Shared counters can lose updates, and two visible windows double the request rate.
-- One startup check polls forever if `ytcfg` never appears, and the candidate pools may hold tens of MB.
-- A watch-column card can show a video that YouTube's own column also shows.
+Current known issues are in `known-issues.md`.
