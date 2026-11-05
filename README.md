@@ -2,6 +2,8 @@
 
 YouTube promotes videos built for engagement, so original takes from small channels often go unseen. This browser extension adds videos from small channels next to what YouTube already recommends you, on the home feed and beside the video you're watching. The cards look exactly like YouTube's, and YouTube's own recommendations stay unless you set the share to 100%.
 
+<img src="docs/popup-dark.png" width="360" alt="The extension's settings popup in dark theme: a slider for the share of small-channel videos, limits for subscribers, views and daily requests, and on/off settings.">
+
 ## Install
 
 1. Download or clone this repository.
