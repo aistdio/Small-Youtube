@@ -4,6 +4,10 @@
 
 It's about fixing the ceiling of how many videos the app can realistically add. Right now it's about 56% of feed, and it can't be more since requests are not optimized. So it's required to do further optimization (either by reducing fetch time from 2 s to 1 s, giving users a slider maybe like other ones; or by some other optimization like keeping found unshown videos (the videos that app gathered successfully but user didn't scroll enough to see them)).
 
+## No hover preview on added videos
+
+YouTube's own videos play a preview when the mouse is over them, but added videos show nothing.
+
 ## Minor issues
 
 These were found in review and left for later:
